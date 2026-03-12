@@ -6,6 +6,30 @@
 
 This document describes the connector architecture for the Metrics Layer — the data collection and normalization subsystem of the Insight platform. The architecture is designed to support multiple data sources while maintaining a unified data model and enabling easy addition of new connectors.
 
+## Connector Ecosystem Strategy
+
+Self-service connector authoring is a strategic priority, not merely a technical option. With 2,000+ potential Cyber Fabric customers each using different tooling stacks, requiring the Constructor/Cyber Fabric team to build every new connector creates a permanent bottleneck that scales poorly with customer growth.
+
+The platform supports three connector authorship tiers:
+
+| Tier | Author | Maintenance | Examples |
+|------|--------|-------------|---------|
+| **First-party connectors** | Constructor / Cyber Fabric engineering | Fully maintained by platform team | GitLab, YouTrack, BambooHR, M365, Zulip |
+| **Community connectors** | Open-source contributors | Community-maintained, reviewed by platform team | Bitbucket, Linear, custom HR systems |
+| **Self-service connectors** | Customers writing their own | Customer-owned; platform provides SDK and validation | Internal proprietary tools, niche SaaS products |
+
+**Connector SDK / Public Spec**: The 10-step connector checklist defined in this document (see [Adding a New Connector](#3-adding-a-new-connector)) already encodes the connector contract. This checklist should be formalized as a public SDK specification — a versioned, documented interface that external developers can implement independently without access to platform internals. Key SDK components:
+
+- `connector.yaml` manifest schema (versioned, validated)
+- Base connector class (`base_connector.py`) published as a library
+- Unifier schema registry with documented extension points
+- Local development harness for testing connectors against mock ClickHouse
+- Connector validation CLI (checks contract compliance before submission)
+
+This enables customers to integrate proprietary internal tools without waiting for vendor roadmap inclusion.
+
+---
+
 ## High-Level Architecture
 
 ```
@@ -245,6 +269,30 @@ The system supports an extensible set of domains. Each domain defines a set of u
 | **organization** | person, functional_team, department, hierarchy | Identity, Org Structure, Cohort | BambooHR, Workday, LDAP |
 | **ai_tools** | ai_session, prompt, completion | AI Leverage, Automation | MCP, Cursor, Copilot |
 | **quality** | test_result, coverage, incident | Stability, Quality | Allure, Sentry |
+| **endpoint_activity** | keystroke_session, app_session, screen_session | Focus Time, Deep Work, Application Usage | *Planned — see below* |
+
+#### Planned Domain: Endpoint Activity
+
+**Status**: Planned. Compliance framework required before implementation.
+
+**Collection model**: Push-based (agent installed on employee endpoint), not Pull (API polling). An agent running on the employee's workstation or mobile device records activity locally and streams aggregated events to the platform.
+
+**Data collected**:
+- Keystroke activity (aggregate counts — not content; not keylogging)
+- Active application time (per-application session duration)
+- Screen-on / screen-off time (presence signal)
+
+**Why this matters**: Endpoint activity is the only source that captures deep work and focus time independently of code commits or task updates. It provides a ground-truth presence signal that complements all other productivity metrics.
+
+**Privacy and compliance requirements** (must be resolved before implementation):
+- Explicit, documented employee consent is mandatory — no silent collection
+- GDPR compliance required (Article 6 lawful basis; Article 88 employment data)
+- Compliance varies significantly by country and jurisdiction — some EU countries (e.g., Germany, France) have codetermination requirements (works council approval)
+- Granularity limits: only aggregate time-window summaries stored; raw keystroke sequences never retained
+- Opt-out mechanism: employees must be able to pause collection at any time
+- Data residency: endpoint data must remain within the employee's legal jurisdiction
+
+**Implementation gate**: This connector category will not be implemented until a formal compliance framework has been reviewed and approved by legal counsel across all target deployment jurisdictions.
 
 ### Extensibility Model
 

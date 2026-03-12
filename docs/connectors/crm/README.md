@@ -7,6 +7,13 @@ Data-source agnostic specification for CRM connectors. Defines unified Bronze sc
 
 **Primary analytics focus**: internal salespeople (employees) — their deal ownership, activity volume, and workload. External contacts and accounts are reference data only.
 
+**Dual analytics purpose**: CRM connectors serve two distinct analytics use cases that must both be supported:
+
+1. **Pipeline analytics** — deals, stages, pipeline value, win rate, forecast. Answers: *What is in the pipeline? How is it progressing?*
+2. **Sales activity analytics** — outreach activity per sales rep: calls made, emails sent, meetings booked, tasks completed. Answers: *How active is each rep? Are they doing the work that leads to deals?*
+
+Sales activity analytics is the primary signal for **Sales rep productivity measurement** — the equivalent of commit count for engineers. A sales rep's pipeline may lag by weeks or months, but activity volume is an immediate, high-frequency signal that reflects current effort. `crm_activities` is the central table for this use case.
+
 <!-- toc -->
 
 - [Overview](#overview)
@@ -278,10 +285,18 @@ Reference data only. Used to group deals and activities by company.
 - `class_crm_activities`: unified activities with resolved `person_id`, normalised `duration_seconds`, human-readable `outcome`
 
 **Gold metrics**:
+
+*Pipeline analytics* (from `crm_deals`):
 - Per salesperson: deal count, total deal value, win rate, average deal cycle time
-- Activity volume: calls/meetings/tasks per week per person
 - Pipeline health: open deals by stage, weighted pipeline value
-- Workload: activity distribution across team members
+
+*Sales activity analytics* (from `crm_activities`):
+- Activity volume per rep per week: calls made, emails sent, meetings booked, tasks completed
+- Activity mix: ratio of calls vs emails vs meetings per rep (prospecting pattern analysis)
+- Outcome rate: completed activities vs total activities (effectiveness signal)
+- Workload: activity distribution and balance across team members
+
+> **Note on `crm_activities` as the productivity signal**: Sales activity metrics are the primary productivity measure for sales roles — analogous to commit count for engineers. Unlike deal metrics (which lag by weeks or months), activity counts are a real-time signal of daily effort. The `crm_activities` table maps from HubSpot Engagements API (`/crm/v3/objects/calls`, `/meetings`, `/tasks`, `/emails`) and Salesforce Activity objects (`Task` + `Event`). Both sources are already covered in the Bronze schema above.
 
 ---
 

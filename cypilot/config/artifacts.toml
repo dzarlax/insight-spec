@@ -111,6 +111,11 @@ name = "LDAP Connector Specification"
 
 [[systems.artifacts]]
 kind = "DESIGN"
+path = "docs/connectors/task-tracking/README.md"
+name = "Task Tracking Connector Specification (Multi-Source)"
+
+[[systems.artifacts]]
+kind = "DESIGN"
 path = "docs/connectors/task-tracking/youtrack.md"
 name = "YouTrack Connector Specification"
 
@@ -119,17 +124,32 @@ kind = "DESIGN"
 path = "docs/connectors/task-tracking/jira.md"
 name = "Jira Connector Specification"
 
-# ── Connectors — Communication ────────────────────────────────────────────────
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/task-tracking/jsm.md"
+name = "Jira Service Management Connector Specification"
+
+# ── Connectors — Collaboration ────────────────────────────────────────────────
 
 [[systems.artifacts]]
 kind = "DESIGN"
-path = "docs/connectors/m365.md"
+path = "docs/connectors/collaboration/README.md"
+name = "Collaboration Connector Specification (Multi-Source)"
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/collaboration/m365.md"
 name = "Microsoft 365 Connector Specification"
 
 [[systems.artifacts]]
 kind = "DESIGN"
-path = "docs/connectors/zulip.md"
+path = "docs/connectors/collaboration/zulip.md"
 name = "Zulip Connector Specification"
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/collaboration/zoom.md"
+name = "Zoom Connector Specification"
 
 # ── Connectors — AI Dev Tools ─────────────────────────────────────────────────
 
@@ -174,6 +194,11 @@ name = "OpenAI API Connector Specification"
 
 [[systems.artifacts]]
 kind = "DESIGN"
+path = "docs/connectors/crm/README.md"
+name = "CRM Connector Specification (Multi-Source)"
+
+[[systems.artifacts]]
+kind = "DESIGN"
 path = "docs/connectors/crm/hubspot.md"
 name = "HubSpot Connector Specification"
 
@@ -181,6 +206,37 @@ name = "HubSpot Connector Specification"
 kind = "DESIGN"
 path = "docs/connectors/crm/salesforce.md"
 name = "Salesforce Connector Specification"
+
+# ── Connectors — Support / Helpdesk ───────────────────────────────────────────
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/support/README.md"
+name = "Support Connector Specification (Multi-Source)"
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/support/zendesk.md"
+name = "Zendesk Connector Specification"
+
+# ── Connectors — Design Tools ─────────────────────────────────────────────────
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/design/README.md"
+name = "Design Tools Connector Specification (Multi-Source)"
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/design/figma.md"
+name = "Figma Connector Specification"
+
+# ── Connectors — AI Dev Tools ─────────────────────────────────────────────────
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/connectors/ai-dev/jetbrains.md"
+name = "JetBrains Connector Specification"
 
 # ── Connectors — Quality / Testing ───────────────────────────────────────────
 
