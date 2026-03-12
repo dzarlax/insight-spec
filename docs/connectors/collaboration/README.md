@@ -3,14 +3,14 @@
 > Version 1.0 — March 2026
 > Based on: Microsoft 365 (Source 6) and Zulip (Source 7)
 
-Data-source agnostic specification for collaboration connectors. Defines unified Bronze schemas that work across M365 and Zulip (with Slack as a planned future source) using a `data_source` discriminator column.
+Defines the Silver layer for collaboration connectors. The Silver layer has two steps: Step 1 unifies raw Bronze data from source-specific tables (`ms365_*`, `zulip_*`, `slack_*`, `zoom_*`) into a common schema; Step 2 enriches with `person_id` via Identity Resolution.
 
 **Primary analytics focus**: employee collaboration patterns — communication intensity, meeting load, document sharing, and async vs. synchronous work balance.
 
 <!-- toc -->
 
 - [Overview](#overview)
-- [Bronze Tables](#bronze-tables)
+- [Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)](#silver-tables--step-1-unified-schema-pre-identity-resolution)
   - [`collab_chat_activity` — Chat messages per user per date](#collab_chat_activity--chat-messages-per-user-per-date)
   - [`collab_meeting_activity` — Meetings and calls per user per date](#collab_meeting_activity--meetings-and-calls-per-user-per-date)
   - [`collab_email_activity` — Email activity per user per date](#collab_email_activity--email-activity-per-user-per-date)
@@ -21,7 +21,7 @@ Data-source agnostic specification for collaboration connectors. Defines unified
   - [Microsoft 365](#microsoft-365)
   - [Zulip](#zulip)
 - [Identity Resolution](#identity-resolution)
-- [Silver / Gold Mappings](#silver--gold-mappings)
+- [Silver Step 2 → Gold](#silver-step-2--gold)
 - [Open Questions](#open-questions)
 
 <!-- /toc -->
@@ -41,7 +41,7 @@ Data-source agnostic specification for collaboration connectors. Defines unified
 - M365: OAuth 2.0 (Azure AD application, `Reports.Read.All` scope)
 - Zulip: HTTP Basic Auth — bot email + API key per realm
 
-**Data model note**: All data at this layer is **pre-aggregated by day**. M365 Graph API exposes activity reports as daily rollups per user — there are no individual event records. Zulip similarly provides aggregated message counts. This is fundamentally different from event-log connectors (git, task tracking) — Bronze tables here are metric tables, not event tables.
+**Data model note**: All data at this layer is **pre-aggregated by day**. M365 Graph API exposes activity reports as daily rollups per user — there are no individual event records. Zulip similarly provides aggregated message counts. This is fundamentally different from event-log connectors (git, task tracking) — Silver Step 1 tables here are metric tables, not event tables.
 
 > **Critical: M365 Data Retention Window**
 > M365 Graph API returns only the **last 7–30 days** of activity. Data cannot be re-fetched once the window passes — loss is permanent. The collector must run at minimum every 7 days to avoid gaps.
@@ -64,7 +64,9 @@ Data-source agnostic specification for collaboration connectors. Defines unified
 
 ---
 
-## Bronze Tables
+## Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)
+
+> **Silver Step 1**: Data from source-specific Bronze tables ([m365.md](m365.md), [zulip.md](zulip.md), [slack.md](slack.md), [zoom.md](zoom.md)) is normalized and written here. No `person_id` yet — Identity Resolution runs in Step 2.
 
 ### `collab_chat_activity` — Chat messages per user per date
 
@@ -234,6 +236,8 @@ Identity anchor for collaboration analytics. M365 does not expose a standalone u
 
 ## Source Mapping
 
+> Per-source Bronze schemas (raw connector output) are defined in [m365.md](m365.md), [zulip.md](zulip.md), [slack.md](slack.md), and [zoom.md](zoom.md). The tables below describe how those Bronze records are normalized into Silver Step 1 unified tables.
+
 ### Microsoft 365
 
 All data collected via Microsoft Graph API v1.0 report endpoints (`/reports/get*ActivityUserDetail`).
@@ -247,7 +251,7 @@ All data collected via Microsoft Graph API v1.0 report endpoints (`/reports/get*
 | `collab_document_activity` (SharePoint) | `getSharePointActivityUserDetail` | same fields + `visitedPageCount`; `product = "sharepoint"` |
 | `collab_users` | Derived from activity report rows | `userPrincipalName` → `email` and `user_id`; `displayName` where available |
 
-**Note**: `getTeamsUserActivityUserDetail` is a single endpoint that returns both chat and meeting metrics — split into two Bronze tables (`collab_chat_activity` and `collab_meeting_activity`) at collection time.
+**Note**: `getTeamsUserActivityUserDetail` is a single endpoint that returns both chat and meeting metrics — split into two Silver Step 1 tables (`collab_chat_activity` and `collab_meeting_activity`) at collection time.
 
 ### Zulip
 
@@ -276,26 +280,28 @@ All data collected via Microsoft Graph API v1.0 report endpoints (`/reports/get*
 
 ---
 
-## Silver / Gold Mappings
+## Silver Step 2 → Gold
 
-| Bronze table | Silver target | Status |
-|-------------|--------------|--------|
+Silver Step 1 (`collab_*`) feeds into Silver Step 2 (`class_*`) after Identity Resolution adds `person_id`.
+
+| Silver Step 1 table | Silver Step 2 target | Status |
+|---------------------|----------------------|--------|
 | `collab_chat_activity` | `class_communication_metrics` | ✓ Mapped — chat channel |
 | `collab_meeting_activity` | `class_communication_metrics` | ✓ Mapped — meetings channel |
 | `collab_email_activity` | `class_communication_metrics` | ✓ Mapped — email channel |
 | `collab_document_activity` | `class_document_metrics` | Planned — not yet defined |
 | `collab_users` | Identity Manager (`email` → `person_id`) | Used for identity resolution |
 
-**`class_communication_metrics`** — existing Silver stream, covers chat + meetings + email across all sources:
+**`class_communication_metrics`** — existing Silver Step 2 stream, covers chat + meetings + email across all sources:
 
-| `data_source` | `channel` | Bronze table | Bronze field |
-|---------------|-----------|--------------|--------------|
+| `data_source` | `channel` | Silver Step 1 table | Silver Step 1 field |
+|---------------|-----------|---------------------|---------------------|
 | `insight_m365` | `chat` | `collab_chat_activity` | `total_chat_messages` |
 | `insight_m365` | `email` | `collab_email_activity` | `sent_count` |
 | `insight_m365` | `meetings` | `collab_meeting_activity` | `meetings_attended` |
 | `insight_zulip` | `chat` | `collab_chat_activity` | `total_chat_messages` |
 
-**`class_document_metrics`** — planned Silver stream for file collaboration:
+**`class_document_metrics`** — planned Silver Step 2 stream for file collaboration:
 - Sources: `collab_document_activity` (OneDrive + SharePoint)
 - Key fields: `person_id`, `date`, `product`, `viewed_or_edited_count`, `shared_internally_count`, `shared_externally_count`
 

@@ -3,14 +3,14 @@
 > Version 1.0 — March 2026
 > Based on: YouTrack (Source 4) and Jira (Source 5)
 
-Data-source agnostic specification for task tracking connectors. Defines unified Bronze schemas that work across YouTrack and Jira using a `data_source` discriminator column.
+Defines the Silver layer for task tracking connectors. The Silver layer has two steps: Step 1 unifies raw Bronze data from source-specific tables (`youtrack_*`, `jira_*`) into a common schema; Step 2 enriches with `person_id` via Identity Resolution.
 
 **Primary analytics focus**: employee productivity metrics — cycle time, throughput, WIP, workload distribution, sprint velocity, and blocker analysis.
 
 <!-- toc -->
 
 - [Overview](#overview)
-- [Bronze Tables](#bronze-tables)
+- [Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)](#silver-tables--step-1-unified-schema-pre-identity-resolution)
   - [`task_tracker_issues` — Issue identifiers and core fields](#task_tracker_issues--issue-identifiers-and-core-fields)
   - [`task_tracker_history` — Complete field change log](#task_tracker_history--complete-field-change-log)
   - [`task_tracker_issue_ext` — Custom fields (key-value)](#task_tracker_issue_ext--custom-fields-key-value)
@@ -25,7 +25,7 @@ Data-source agnostic specification for task tracking connectors. Defines unified
   - [YouTrack](#youtrack)
   - [Jira](#jira)
 - [Identity Resolution](#identity-resolution)
-- [Silver / Gold Mappings](#silver--gold-mappings)
+- [Silver Step 2 → Gold](#silver-step-2--gold)
 - [Open Questions](#open-questions)
 
 <!-- /toc -->
@@ -48,7 +48,7 @@ Data-source agnostic specification for task tracking connectors. Defines unified
 
 **Design principle**: `task_tracker_issues` stores identifiers and immutable context. `task_tracker_history` is an append-only event log — the source of truth for cycle time, status periods, and assignee history. This pattern applies uniformly across YouTrack and Jira.
 
-**`source_instance_id`**: present in all tables — required to disambiguate multiple tool instances (e.g. two YouTrack tenants or multiple Jira organizations in the same Bronze store). `(source_instance_id, issue_id)` is the composite primary key for issues.
+**`source_instance_id`**: present in all tables — required to disambiguate multiple tool instances (e.g. two YouTrack tenants or multiple Jira organizations in the same Silver Step 1 store). `(source_instance_id, issue_id)` is the composite primary key for issues.
 
 **Terminology mapping**:
 
@@ -63,7 +63,9 @@ Data-source agnostic specification for task tracking connectors. Defines unified
 
 ---
 
-## Bronze Tables
+## Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)
+
+> **Silver Step 1**: Data from source-specific Bronze tables ([youtrack.md](youtrack.md) and [jira.md](jira.md)) is normalized and written here. No `person_id` yet — Identity Resolution runs in Step 2.
 
 ### `task_tracker_issues` — Issue identifiers and core fields
 
@@ -326,6 +328,8 @@ Stores per-issue custom field values that don't fit the core schema. Follows the
 
 ## Source Mapping
 
+> Per-source Bronze schemas (raw connector output) are defined in [youtrack.md](youtrack.md) and [jira.md](jira.md). The tables below describe how those Bronze records are normalized into Silver Step 1 unified tables.
+
 ### YouTrack
 
 | Unified table | YouTrack source | Key mapping notes |
@@ -381,10 +385,12 @@ Same chain applies to `task_tracker_worklogs.author_id`, `task_tracker_comments.
 
 ---
 
-## Silver / Gold Mappings
+## Silver Step 2 → Gold
 
-| Bronze table | Silver target | Notes |
-|-------------|--------------|-------|
+Silver Step 1 (`task_tracker_*`) feeds into Silver Step 2 (`class_*`) after Identity Resolution adds `person_id`.
+
+| Silver Step 1 table | Silver Step 2 target | Notes |
+|---------------------|----------------------|-------|
 | `task_tracker_issues` + `task_tracker_history` | `class_task_tracker_activities` | Append-only event stream — state transitions with resolved `person_id` |
 | `task_tracker_issues` + `task_tracker_history` | `class_task_tracker_snapshot` | Current state per issue (upsert) — latest assignee, status, priority |
 | `task_tracker_worklogs` | `class_task_tracker_worklogs` | Planned — actual time logged per person per issue |
@@ -393,11 +399,9 @@ Same chain applies to `task_tracker_worklogs.author_id`, `task_tracker_comments.
 | `task_tracker_users` | Identity Manager (`email` → `person_id`) | Used for identity resolution |
 | `task_tracker_projects` | Reference — team/project mapping | No unified stream; used for grouping and filtering |
 | `task_tracker_issue_links` | Reference — blocker analysis | Used to flag blocked issues in Gold |
-| `task_tracker_issue_ext` | Merged into Silver snapshots | Custom fields promoted selectively by configuration |
+| `task_tracker_issue_ext` | Merged into Silver Step 2 snapshots | Custom fields promoted selectively by configuration |
 
-**Silver step 1**: `class_task_tracker_activities` (event log) + `class_task_tracker_snapshot` (current state)
-
-**Silver step 2**: identity resolution — `author_id` → `person_id` via Identity Manager
+**Silver Step 2**: `class_task_tracker_activities` (event log) + `class_task_tracker_snapshot` (current state) — identity resolution adds `author_id` → `person_id` via Identity Manager
 
 **Gold metrics**:
 - **Cycle time**: time from first `In Progress` to first `Done` transition in `task_tracker_history`

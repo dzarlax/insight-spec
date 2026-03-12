@@ -3,7 +3,7 @@
 > Version 1.0 — March 2026
 > Based on: HubSpot (Source 16) and Salesforce (Source 17)
 
-Data-source agnostic specification for CRM connectors. Defines unified Bronze schemas that work across HubSpot and Salesforce using a `data_source` discriminator column.
+Defines the Silver layer for CRM connectors. The Silver layer has two steps: Step 1 unifies raw Bronze data from source-specific tables (`hubspot_*`, `salesforce_*`) into a common schema; Step 2 enriches with `person_id` via Identity Resolution.
 
 **Primary analytics focus**: internal salespeople (employees) — their deal ownership, activity volume, and workload. External contacts and accounts are reference data only.
 
@@ -17,7 +17,7 @@ Sales activity analytics is the primary signal for **Sales rep productivity meas
 <!-- toc -->
 
 - [Overview](#overview)
-- [Bronze Tables](#bronze-tables)
+- [Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)](#silver-tables--step-1-unified-schema-pre-identity-resolution)
   - [`crm_users` — Internal salesperson directory](#crm_users--internal-salesperson-directory)
   - [`crm_deals` — Deal / opportunity pipeline](#crm_deals--deal--opportunity-pipeline)
   - [`crm_activities` — Calls, meetings, tasks](#crm_activities--calls-meetings-tasks)
@@ -28,7 +28,7 @@ Sales activity analytics is the primary signal for **Sales rep productivity meas
   - [HubSpot](#hubspot)
   - [Salesforce](#salesforce)
 - [Identity Resolution](#identity-resolution)
-- [Silver / Gold Mappings](#silver--gold-mappings)
+- [Silver Step 2 → Gold](#silver-step-2--gold)
 - [Open Questions](#open-questions)
   - [OQ-CRM-1: `is_won` / `is_closed` derivation for HubSpot](#oq-crm-1-is_won--is_closed-derivation-for-hubspot)
   - [OQ-CRM-2: Activity duration normalisation](#oq-crm-2-activity-duration-normalisation)
@@ -69,7 +69,9 @@ Sales activity analytics is the primary signal for **Sales rep productivity meas
 
 ---
 
-## Bronze Tables
+## Silver Tables — Step 1: Unified Schema (pre-Identity Resolution)
+
+> **Silver Step 1**: Data from source-specific Bronze tables ([hubspot.md](hubspot.md) and [salesforce.md](salesforce.md)) is normalized and written here. No `person_id` yet — Identity Resolution runs in Step 2.
 
 ### `crm_users` — Internal salesperson directory
 
@@ -232,6 +234,8 @@ Reference data only. Used to group deals and activities by company.
 
 ## Source Mapping
 
+> Per-source Bronze schemas (raw connector output) are defined in [hubspot.md](hubspot.md) and [salesforce.md](salesforce.md). The tables below describe how those Bronze records are normalized into Silver Step 1 unified tables.
+
 ### HubSpot
 
 | Unified table | HubSpot source | Key mapping notes |
@@ -270,17 +274,19 @@ Reference data only. Used to group deals and activities by company.
 
 ---
 
-## Silver / Gold Mappings
+## Silver Step 2 → Gold
 
-| Bronze table | Silver target | Notes |
-|-------------|--------------|-------|
+Silver Step 1 (`crm_*`) feeds into Silver Step 2 (`class_*`) after Identity Resolution adds `person_id`.
+
+| Silver Step 1 table | Silver Step 2 target | Notes |
+|---------------------|----------------------|-------|
 | `crm_users` | Identity Manager (`email` → `person_id`) | Used for identity resolution |
 | `crm_deals` | `class_crm_deals` | Planned — unified deal pipeline stream |
 | `crm_activities` | `class_crm_activities` | Planned — unified activity stream |
-| `crm_contacts` | *(reference only)* | No Silver target — used to enrich deal/activity context |
-| `crm_accounts` | *(reference only)* | No Silver target — used for grouping by company |
+| `crm_contacts` | *(reference only)* | No Silver Step 2 target — used to enrich deal/activity context |
+| `crm_accounts` | *(reference only)* | No Silver Step 2 target — used for grouping by company |
 
-**Planned Silver streams**:
+**Planned Silver Step 2 streams**:
 - `class_crm_deals`: deduplicated deals with resolved `person_id`, normalised `is_won`/`is_closed`, stage category
 - `class_crm_activities`: unified activities with resolved `person_id`, normalised `duration_seconds`, human-readable `outcome`
 
