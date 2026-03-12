@@ -57,17 +57,17 @@ Standalone specification for the Jira (Task Tracking) connector.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier, e.g. `jira-team-alpha` |
-| `jira_id` | text | Jira internal numeric ID, e.g. `10001` |
-| `id_readable` | text | Human-readable key, e.g. `PROJ-123` — joins to `jira_issue_history.id_readable` |
-| `project_key` | text | Project key, e.g. `PROJ` — from `fields.project.key` |
-| `issue_type` | text | Issue type name — from `fields.issuetype.name`, e.g. `Bug` / `Story` / `Task` / `Epic` |
-| `reporter_id` | text | Who created the issue — `fields.reporter.accountId` — joins to `jira_user.account_id` |
-| `story_points` | numeric | Story points estimate — from `fields.story_points` (Classic) or `fields.customfield_10016` (Next-gen); NULL if not set |
-| `due_date` | date | Due date — from `fields.duedate`; NULL if not set |
-| `parent_id` | text | Parent issue key for subtasks or Epic link — from `fields.parent.key` or `fields.customfield_10014`; NULL if top-level |
-| `created` | timestamptz | Issue creation timestamp — from `fields.created` |
-| `updated` | timestamptz | Last update — from `fields.updated`; cursor for incremental sync |
+| `source_instance_id` | String | Connector instance identifier, e.g. `jira-team-alpha` |
+| `jira_id` | String | Jira internal numeric ID, e.g. `10001` |
+| `id_readable` | String | Human-readable key, e.g. `PROJ-123` — joins to `jira_issue_history.id_readable` |
+| `project_key` | String | Project key, e.g. `PROJ` — from `fields.project.key` |
+| `issue_type` | String | Issue type name — from `fields.issuetype.name`, e.g. `Bug` / `Story` / `Task` / `Epic` |
+| `reporter_id` | String | Who created the issue — `fields.reporter.accountId` — joins to `jira_user.account_id` |
+| `story_points` | Float64 | Story points estimate — from `fields.story_points` (Classic) or `fields.customfield_10016` (Next-gen); NULL if not set |
+| `due_date` | Date | Due date — from `fields.duedate`; NULL if not set |
+| `parent_id` | String | Parent issue key for subtasks or Epic link — from `fields.parent.key` or `fields.customfield_10014`; NULL if top-level |
+| `created` | DateTime64(3) | Issue creation timestamp — from `fields.created` |
+| `updated` | DateTime64(3) | Last update — from `fields.updated`; cursor for incremental sync |
 
 **Note on `story_points`**: field name differs between Jira Classic (`story_points`) and Next-gen projects (`customfield_10016`). Some instances use other custom field IDs. Connector must detect or be configured with the correct field ID per instance.
 
@@ -79,18 +79,18 @@ Every state transition, reassignment, and field update is a separate row. Collec
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier — scopes all IDs |
-| `id_readable` | text | Human-readable issue key — joins to `jira_issue.id_readable` |
-| `issue_jira_id` | text | Parent issue's internal numeric ID |
-| `author_account_id` | text | Atlassian account ID of who made the change — joins to `jira_user.account_id` |
-| `changelog_id` | text | Changelog entry ID — multiple field changes in one operation share this |
-| `created_at` | timestamptz | When the change was made — from `created` |
-| `field_id` | text | Machine-readable field identifier — from `fieldId` |
-| `field_name` | text | Human-readable field name — from `field`, e.g. `status`, `assignee`, `priority` |
-| `value_from` | text | Previous raw value (ID or key) — from `from`; NULL if field was empty |
-| `value_from_string` | text | Previous human-readable value — from `fromString`, e.g. `In Progress` |
-| `value_to` | text | New raw value after the change — from `to` |
-| `value_to_string` | text | New human-readable value — from `toString`, e.g. `Done` |
+| `source_instance_id` | String | Connector instance identifier — scopes all IDs |
+| `id_readable` | String | Human-readable issue key — joins to `jira_issue.id_readable` |
+| `issue_jira_id` | String | Parent issue's internal numeric ID |
+| `author_account_id` | String | Atlassian account ID of who made the change — joins to `jira_user.account_id` |
+| `changelog_id` | String | Changelog entry ID — multiple field changes in one operation share this |
+| `created_at` | DateTime64(3) | When the change was made — from `created` |
+| `field_id` | String | Machine-readable field identifier — from `fieldId` |
+| `field_name` | String | Human-readable field name — from `field`, e.g. `status`, `assignee`, `priority` |
+| `value_from` | String | Previous raw value (ID or key) — from `from`; NULL if field was empty |
+| `value_from_string` | String | Previous human-readable value — from `fromString`, e.g. `In Progress` |
+| `value_to` | String | New raw value after the change — from `to` |
+| `value_to_string` | String | New human-readable value — from `toString`, e.g. `Done` |
 
 **`changelog_id` groups related changes**: one user action updating multiple fields produces multiple rows with the same `changelog_id`.
 
@@ -102,13 +102,13 @@ Stores per-issue custom field values that don't fit the core schema. Follows the
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `id_readable` | text | Issue key — joins to `jira_issue.id_readable` |
-| `field_id` | text | Custom field ID, e.g. `customfield_10050` |
-| `field_name` | text | Custom field display name, e.g. `Team`, `Squad`, `Customer` |
-| `field_value` | text | Field value as string (JSON for complex types) |
-| `value_type` | text | Type hint: `string` / `number` / `user` / `option` / `json` |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `id_readable` | String | Issue key — joins to `jira_issue.id_readable` |
+| `field_id` | String | Custom field ID, e.g. `customfield_10050` |
+| `field_name` | String | Custom field display name, e.g. `Team`, `Squad`, `Customer` |
+| `field_value` | String | Field value as string (JSON for complex types) |
+| `value_type` | String | Type hint: `string` / `number` / `user` / `option` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: captures team, squad, domain, customer, and other org-specific fields without schema changes. Custom field discovery via `GET /rest/api/3/field`.
 
@@ -120,14 +120,14 @@ Collected from `GET /rest/api/3/issue/{key}/worklog`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `worklog_id` | text | Worklog entry ID |
-| `id_readable` | text | Parent issue key — joins to `jira_issue.id_readable` |
-| `author_account_id` | text | Who logged the time — joins to `jira_user.account_id` |
-| `started` | timestamptz | When the work was done (not collection time) — from `started` |
-| `time_spent_seconds` | numeric | Time logged in seconds — from `timeSpentSeconds` |
-| `comment` | text | Worklog comment (nullable) — from `comment.content` |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `worklog_id` | String | Worklog entry ID |
+| `id_readable` | String | Parent issue key — joins to `jira_issue.id_readable` |
+| `author_account_id` | String | Who logged the time — joins to `jira_user.account_id` |
+| `started` | DateTime64(3) | When the work was done (not collection time) — from `started` |
+| `time_spent_seconds` | Float64 | Time logged in seconds — from `timeSpentSeconds` |
+| `comment` | String | Worklog comment (nullable) — from `comment.content` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: actual time spent per person per issue. Complements state-change history — an issue can be "In Progress" for weeks but have only 2 hours of logged work.
 
@@ -139,13 +139,13 @@ Collected from `GET /rest/api/3/issue/{key}/comment`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `comment_id` | text | Comment ID |
-| `id_readable` | text | Parent issue key — joins to `jira_issue.id_readable` |
-| `author_account_id` | text | Comment author — joins to `jira_user.account_id` |
-| `created` | timestamptz | When comment was posted |
-| `updated` | timestamptz | Last edit timestamp |
-| `body` | text | Comment body (Atlassian Document Format; plain text extracted at collection) |
+| `source_instance_id` | String | Connector instance identifier |
+| `comment_id` | String | Comment ID |
+| `id_readable` | String | Parent issue key — joins to `jira_issue.id_readable` |
+| `author_account_id` | String | Comment author — joins to `jira_user.account_id` |
+| `created` | DateTime64(3) | When comment was posted |
+| `updated` | DateTime64(3) | Last edit timestamp |
+| `body` | String | Comment body (Atlassian Document Format; plain text extracted at collection) |
 
 **Purpose**: collaboration signal — comment volume per person, review participation, cross-team communication.
 
@@ -157,15 +157,15 @@ Collected from `GET /rest/api/3/project`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `project_id` | text | Jira internal project ID |
-| `project_key` | text | Project key, e.g. `PROJ` — joins to `jira_issue.project_key` |
-| `name` | text | Project name |
-| `lead_account_id` | text | Project lead — joins to `jira_user.account_id` |
-| `project_type` | text | `software` / `business` / `service_desk` |
-| `style` | text | `classic` / `next-gen` — affects custom field names |
-| `archived` | boolean | Whether the project is archived |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `project_id` | String | Jira internal project ID |
+| `project_key` | String | Project key, e.g. `PROJ` — joins to `jira_issue.project_key` |
+| `name` | String | Project name |
+| `lead_account_id` | String | Project lead — joins to `jira_user.account_id` |
+| `project_type` | String | `software` / `business` / `service_desk` |
+| `style` | String | `classic` / `next-gen` — affects custom field names |
+| `archived` | Bool | Whether the project is archived |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: maps issues to teams/departments. `style` field is important — Next-gen and Classic projects use different custom field IDs for story points and sprints.
 
@@ -177,11 +177,11 @@ Collected from `fields.issuelinks` in issue response.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `source_issue` | text | Source issue key |
-| `target_issue` | text | Target issue key |
-| `link_type` | text | Link type name, e.g. `blocks` / `is blocked by` / `duplicates` / `relates to` / `is subtask of` |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `source_issue` | String | Source issue key |
+| `target_issue` | String | Target issue key |
+| `link_type` | String | Link type name, e.g. `blocks` / `is blocked by` / `duplicates` / `relates to` / `is subtask of` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: dependency and blocker analysis. Required for fair productivity measurement — blocked issues should not count against the assignee's throughput.
 
@@ -193,17 +193,17 @@ Collected from `GET /rest/agile/1.0/board/{boardId}/sprint`. Board list from `GE
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `sprint_id` | numeric | Sprint ID |
-| `board_id` | numeric | Agile board ID |
-| `board_name` | text | Agile board name |
-| `sprint_name` | text | Sprint name |
-| `state` | text | `active` / `closed` / `future` |
-| `start_date` | timestamptz | Sprint start |
-| `end_date` | timestamptz | Sprint end (planned) |
-| `complete_date` | timestamptz | Sprint completion date (NULL if not closed) |
-| `project_key` | text | Associated project — from board configuration |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `sprint_id` | Float64 | Sprint ID |
+| `board_id` | Float64 | Agile board ID |
+| `board_name` | String | Agile board name |
+| `sprint_name` | String | Sprint name |
+| `state` | String | `active` / `closed` / `future` |
+| `start_date` | DateTime64(3) | Sprint start |
+| `end_date` | DateTime64(3) | Sprint end (planned) |
+| `complete_date` | DateTime64(3) | Sprint completion date (NULL if not closed) |
+| `project_key` | String | Associated project — from board configuration |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Note**: Issue-to-sprint assignment is tracked via `fields.customfield_10020` (Next-gen) or `fields.sprint` (Classic) in the issue. Sprint changes appear in `jira_issue_history` as `field_name = "Sprint"`.
 
@@ -213,12 +213,12 @@ Collected from `GET /rest/agile/1.0/board/{boardId}/sprint`. Board list from `GE
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `account_id` | text | Atlassian account ID — joins to `author_account_id` / `reporter_id` / `lead_account_id` |
-| `email` | text | Email — primary key for cross-system identity resolution; **nullable** — may be suppressed by Atlassian privacy controls |
-| `display_name` | text | Display name |
-| `account_type` | text | `atlassian` / `app` / `customer` |
-| `active` | boolean | Whether the account is active |
+| `source_instance_id` | String | Connector instance identifier |
+| `account_id` | String | Atlassian account ID — joins to `author_account_id` / `reporter_id` / `lead_account_id` |
+| `email` | String | Email — primary key for cross-system identity resolution; **nullable** — may be suppressed by Atlassian privacy controls |
+| `display_name` | String | Display name |
+| `account_type` | String | `atlassian` / `app` / `customer` |
+| `active` | Bool | Whether the account is active |
 
 **Note**: `account_id` is shared across the Atlassian platform (Jira, Confluence, Bitbucket on the same tenant). When `email` is suppressed, `account_id` may be used as a fallback within the Atlassian ecosystem — see OQ-JIRA-1.
 
@@ -228,18 +228,18 @@ Collected from `GET /rest/agile/1.0/board/{boardId}/sprint`. Board list from `GE
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `run_id` | text | Unique run identifier |
-| `started_at` | timestamp | Run start time |
-| `completed_at` | timestamp | Run end time |
-| `status` | text | `running` / `completed` / `failed` |
-| `issues_collected` | numeric | Rows collected for `jira_issue` |
-| `history_records_collected` | numeric | Rows collected for `jira_issue_history` |
-| `worklogs_collected` | numeric | Rows collected for `jira_worklogs` |
-| `comments_collected` | numeric | Rows collected for `jira_comments` |
-| `users_collected` | numeric | Rows collected for `jira_user` |
-| `api_calls` | numeric | API / SOQL calls made |
-| `errors` | numeric | Errors encountered |
-| `settings` | jsonb | Collection configuration (instance URL, project filter, lookback) |
+| `run_id` | String | Unique run identifier |
+| `started_at` | DateTime64(3) | Run start time |
+| `completed_at` | DateTime64(3) | Run end time |
+| `status` | String | `running` / `completed` / `failed` |
+| `issues_collected` | Float64 | Rows collected for `jira_issue` |
+| `history_records_collected` | Float64 | Rows collected for `jira_issue_history` |
+| `worklogs_collected` | Float64 | Rows collected for `jira_worklogs` |
+| `comments_collected` | Float64 | Rows collected for `jira_comments` |
+| `users_collected` | Float64 | Rows collected for `jira_user` |
+| `api_calls` | Float64 | API / SOQL calls made |
+| `errors` | Float64 | Errors encountered |
+| `settings` | String | Collection configuration (instance URL, project filter, lookback) |
 
 ---
 

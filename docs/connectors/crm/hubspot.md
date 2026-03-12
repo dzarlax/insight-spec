@@ -49,16 +49,16 @@ Standalone specification for the HubSpot (CRM) connector. Expands Source 16 in t
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `contact_id` | text | HubSpot internal contact ID (`id` in API response) |
-| `email` | text | Primary email — CRM contact email (external customer) |
-| `first_name` | text | First name (`firstname` property) |
-| `last_name` | text | Last name (`lastname` property) |
-| `phone` | text | Primary phone number |
-| `job_title` | text | Job title (`jobtitle` property) |
-| `owner_id` | text | HubSpot owner (salesperson) ID (`hubspot_owner_id` property) — joins to `hubspot_owners.owner_id` |
-| `lifecycle_stage` | text | `subscriber` / `lead` / `opportunity` / `customer` / etc. |
-| `created_at` | timestamptz | Record creation (`createdate` property) |
-| `updated_at` | timestamptz | Last update (`lastmodifieddate` property) — cursor for incremental sync |
+| `contact_id` | String | HubSpot internal contact ID (`id` in API response) |
+| `email` | String | Primary email — CRM contact email (external customer) |
+| `first_name` | String | First name (`firstname` property) |
+| `last_name` | String | Last name (`lastname` property) |
+| `phone` | String | Primary phone number |
+| `job_title` | String | Job title (`jobtitle` property) |
+| `owner_id` | String | HubSpot owner (salesperson) ID (`hubspot_owner_id` property) — joins to `hubspot_owners.owner_id` |
+| `lifecycle_stage` | String | `subscriber` / `lead` / `opportunity` / `customer` / etc. |
+| `created_at` | DateTime64(3) | Record creation (`createdate` property) |
+| `updated_at` | DateTime64(3) | Last update (`lastmodifieddate` property) — cursor for incremental sync |
 
 **Note**: Contact–company association is not a direct property — collected via `/crm/v3/objects/contacts/{id}/associations/companies` and stored in `hubspot_associations`.
 
@@ -68,13 +68,13 @@ Standalone specification for the HubSpot (CRM) connector. Expands Source 16 in t
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `company_id` | text | HubSpot internal company ID |
-| `name` | text | Company name |
-| `domain` | text | Website domain |
-| `industry` | text | Industry classification |
-| `owner_id` | text | Account owner ID — joins to `hubspot_owners.owner_id` |
-| `created_at` | timestamptz | Record creation |
-| `updated_at` | timestamptz | Last update |
+| `company_id` | String | HubSpot internal company ID |
+| `name` | String | Company name |
+| `domain` | String | Website domain |
+| `industry` | String | Industry classification |
+| `owner_id` | String | Account owner ID — joins to `hubspot_owners.owner_id` |
+| `created_at` | DateTime64(3) | Record creation |
+| `updated_at` | DateTime64(3) | Last update |
 
 ---
 
@@ -82,15 +82,15 @@ Standalone specification for the HubSpot (CRM) connector. Expands Source 16 in t
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `deal_id` | text | HubSpot internal deal ID |
-| `deal_name` | text | Deal name (`dealname` property) |
-| `pipeline` | text | Pipeline internal name (`pipeline` property) |
-| `stage` | text | Current stage internal name (`dealstage`), e.g. `appointmentscheduled` / `closedwon` / `closedlost` — portal-specific values |
-| `amount` | numeric | Deal amount |
-| `close_date` | date | Expected or actual close date (`closedate`) |
-| `owner_id` | text | Deal owner ID (`hubspot_owner_id`) — joins to `hubspot_owners.owner_id` |
-| `created_at` | timestamptz | Deal creation (`createdate`) |
-| `updated_at` | timestamptz | Last update (`hs_lastmodifieddate`) — cursor for incremental sync |
+| `deal_id` | String | HubSpot internal deal ID |
+| `deal_name` | String | Deal name (`dealname` property) |
+| `pipeline` | String | Pipeline internal name (`pipeline` property) |
+| `stage` | String | Current stage internal name (`dealstage`), e.g. `appointmentscheduled` / `closedwon` / `closedlost` — portal-specific values |
+| `amount` | Float64 | Deal amount |
+| `close_date` | Date | Expected or actual close date (`closedate`) |
+| `owner_id` | String | Deal owner ID (`hubspot_owner_id`) — joins to `hubspot_owners.owner_id` |
+| `created_at` | DateTime64(3) | Deal creation (`createdate`) |
+| `updated_at` | DateTime64(3) | Last update (`hs_lastmodifieddate`) — cursor for incremental sync |
 
 **Note**: `is_won` / `is_closed` are not HubSpot deal properties — derived in Silver by comparing `stage` against closed stages from pipeline settings (`GET /crm/v3/pipelines/deals`).
 
@@ -104,16 +104,16 @@ Collected from separate v3 endpoints per type (`/crm/v3/objects/calls`, `/meetin
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `activity_id` | text | HubSpot object ID |
-| `activity_type` | text | `call` / `email` / `meeting` / `task` / `note` |
-| `owner_id` | text | Activity owner (`hubspot_owner_id` property) — joins to `hubspot_owners.owner_id` |
-| `contact_id` | text | Associated contact ID (from associations; nullable) |
-| `deal_id` | text | Associated deal ID (from associations; nullable) |
-| `timestamp` | timestamptz | When the activity occurred (`hs_timestamp` property) |
-| `duration_ms` | numeric | Duration in **milliseconds** (`hs_call_duration` for calls; NULL for other types) |
-| `call_disposition_id` | text | Call outcome GUID (`hs_call_disposition`) — resolve to label via `GET /crm/v3/objects/call-dispositions`; NULL for non-calls |
-| `meeting_outcome` | text | Meeting status (`hs_meeting_outcome`): `SCHEDULED` / `COMPLETED` / `NO_SHOW` / etc.; NULL for non-meetings |
-| `created_at` | timestamptz | Record creation |
+| `activity_id` | String | HubSpot object ID |
+| `activity_type` | String | `call` / `email` / `meeting` / `task` / `note` |
+| `owner_id` | String | Activity owner (`hubspot_owner_id` property) — joins to `hubspot_owners.owner_id` |
+| `contact_id` | String | Associated contact ID (from associations; nullable) |
+| `deal_id` | String | Associated deal ID (from associations; nullable) |
+| `timestamp` | DateTime64(3) | When the activity occurred (`hs_timestamp` property) |
+| `duration_ms` | Float64 | Duration in **milliseconds** (`hs_call_duration` for calls; NULL for other types) |
+| `call_disposition_id` | String | Call outcome GUID (`hs_call_disposition`) — resolve to label via `GET /crm/v3/objects/call-dispositions`; NULL for non-calls |
+| `meeting_outcome` | String | Meeting status (`hs_meeting_outcome`): `SCHEDULED` / `COMPLETED` / `NO_SHOW` / etc.; NULL for non-meetings |
+| `created_at` | DateTime64(3) | Record creation |
 
 **Note**: `duration_ms` is in milliseconds — convert to seconds in Silver layer. Meeting duration is derived from `hs_meeting_start_time` and `hs_meeting_end_time` if `duration_ms` is NULL.
 
@@ -127,11 +127,11 @@ HubSpot stores relationships between objects (contacts↔companies, deals↔cont
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `from_object_type` | text | Source object type: `deal` / `contact` / `company` |
-| `from_object_id` | text | Source object ID |
-| `to_object_type` | text | Target object type: `deal` / `contact` / `company` |
-| `to_object_id` | text | Target object ID |
-| `collected_at` | timestamptz | Collection timestamp |
+| `from_object_type` | String | Source object type: `deal` / `contact` / `company` |
+| `from_object_id` | String | Source object ID |
+| `to_object_type` | String | Target object type: `deal` / `contact` / `company` |
+| `to_object_id` | String | Target object ID |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 ---
 
@@ -139,11 +139,11 @@ HubSpot stores relationships between objects (contacts↔companies, deals↔cont
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `owner_id` | text | HubSpot owner ID — joins to `owner_id` in other tables |
-| `email` | text | Owner email — identity resolution key for internal salespeople |
-| `first_name` | text | First name |
-| `last_name` | text | Last name |
-| `archived` | boolean | Whether the owner account is deactivated |
+| `owner_id` | String | HubSpot owner ID — joins to `owner_id` in other tables |
+| `email` | String | Owner email — identity resolution key for internal salespeople |
+| `first_name` | String | First name |
+| `last_name` | String | Last name |
+| `archived` | Bool | Whether the owner account is deactivated |
 
 Identity anchor for all salesperson-owned CRM objects.
 
@@ -153,18 +153,18 @@ Identity anchor for all salesperson-owned CRM objects.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `run_id` | text | Unique run identifier |
-| `started_at` | timestamp | Run start time |
-| `completed_at` | timestamp | Run end time |
-| `status` | text | `running` / `completed` / `failed` |
-| `contacts_collected` | numeric | Rows collected for `hubspot_contacts` |
-| `companies_collected` | numeric | Rows collected for `hubspot_companies` |
-| `deals_collected` | numeric | Rows collected for `hubspot_deals` |
-| `activities_collected` | numeric | Rows collected for `hubspot_activities` |
-| `owners_collected` | numeric | Rows collected for `hubspot_owners` |
-| `api_calls` | numeric | API calls made |
-| `errors` | numeric | Errors encountered |
-| `settings` | jsonb | Collection configuration (portal, object types, lookback) |
+| `run_id` | String | Unique run identifier |
+| `started_at` | DateTime64(3) | Run start time |
+| `completed_at` | DateTime64(3) | Run end time |
+| `status` | String | `running` / `completed` / `failed` |
+| `contacts_collected` | Float64 | Rows collected for `hubspot_contacts` |
+| `companies_collected` | Float64 | Rows collected for `hubspot_companies` |
+| `deals_collected` | Float64 | Rows collected for `hubspot_deals` |
+| `activities_collected` | Float64 | Rows collected for `hubspot_activities` |
+| `owners_collected` | Float64 | Rows collected for `hubspot_owners` |
+| `api_calls` | Float64 | API calls made |
+| `errors` | Float64 | Errors encountered |
+| `settings` | String | Collection configuration (portal, object types, lookback) |
 
 Monitoring table — not an analytics source.
 

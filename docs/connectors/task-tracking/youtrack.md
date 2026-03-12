@@ -51,16 +51,16 @@ Standalone specification for the YouTrack (Task Tracking) connector.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier, e.g. `youtrack-acme-prod` |
-| `youtrack_id` | text | YouTrack internal ID, e.g. `2-12345` |
-| `id_readable` | text | Human-readable ID, e.g. `MON-123` — joins to `youtrack_issue_history.id_readable` |
-| `project_key` | text | Project short name, e.g. `MON` — from `project(shortName)` |
-| `issue_type` | text | Issue type name, e.g. `Bug` / `Story` / `Task` / `Epic` — from `type(name)` |
-| `reporter_id` | text | Who created the issue — `reporter.id` — joins to `youtrack_user.youtrack_id` |
-| `story_points` | numeric | Initial story points estimate — from custom field (field name is instance-specific, see note) |
-| `due_date` | date | Due date — from `dueDate` field (NULL if not set) |
-| `created` | timestamp | Issue creation timestamp — Unix ms, converted to datetime |
-| `updated` | timestamp | Last update — Unix ms, converted; cursor for incremental sync |
+| `source_instance_id` | String | Connector instance identifier, e.g. `youtrack-acme-prod` |
+| `youtrack_id` | String | YouTrack internal ID, e.g. `2-12345` |
+| `id_readable` | String | Human-readable ID, e.g. `MON-123` — joins to `youtrack_issue_history.id_readable` |
+| `project_key` | String | Project short name, e.g. `MON` — from `project(shortName)` |
+| `issue_type` | String | Issue type name, e.g. `Bug` / `Story` / `Task` / `Epic` — from `type(name)` |
+| `reporter_id` | String | Who created the issue — `reporter.id` — joins to `youtrack_user.youtrack_id` |
+| `story_points` | Float64 | Initial story points estimate — from custom field (field name is instance-specific, see note) |
+| `due_date` | Date | Due date — from `dueDate` field (NULL if not set) |
+| `created` | DateTime64(3) | Issue creation timestamp — Unix ms, converted to datetime |
+| `updated` | DateTime64(3) | Last update — Unix ms, converted; cursor for incremental sync |
 
 **Note on `story_points`**: YouTrack stores estimates as a custom field. The field name varies by project template — common names are `Story Points` or `Estimation` (Scrum template uses minutes). The connector must be configured with the correct field name per instance.
 
@@ -74,17 +74,17 @@ Every state transition, reassignment, and field update is a separate row. Collec
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier — scopes all IDs |
-| `id_readable` | text | Human-readable issue ID — joins to `youtrack_issue.id_readable` |
-| `issue_youtrack_id` | text | Parent issue's internal ID |
-| `author_youtrack_id` | text | Who made the change — `author.id` — joins to `youtrack_user.youtrack_id` |
-| `activity_id` | text | Activity ID — multiple changes in one operation share this batch ID |
-| `created_at` | timestamptz | When the change was made — converted from Unix ms (`timestamp` field) |
-| `field_id` | text | Machine-readable field identifier |
-| `field_name` | text | Human-readable field name, e.g. `State`, `Assignee`, `Priority` |
-| `value_added` | jsonb | New value after the change — from `added` array; varies by field type (see note) |
-| `value_removed` | jsonb | Previous value before the change — from `removed` array; NULL if field was empty |
-| `value_id` | text | Unique value change ID — for deduplication |
+| `source_instance_id` | String | Connector instance identifier — scopes all IDs |
+| `id_readable` | String | Human-readable issue ID — joins to `youtrack_issue.id_readable` |
+| `issue_youtrack_id` | String | Parent issue's internal ID |
+| `author_youtrack_id` | String | Who made the change — `author.id` — joins to `youtrack_user.youtrack_id` |
+| `activity_id` | String | Activity ID — multiple changes in one operation share this batch ID |
+| `created_at` | DateTime64(3) | When the change was made — converted from Unix ms (`timestamp` field) |
+| `field_id` | String | Machine-readable field identifier |
+| `field_name` | String | Human-readable field name, e.g. `State`, `Assignee`, `Priority` |
+| `value_added` | String | New value after the change — from `added` array; varies by field type (see note) |
+| `value_removed` | String | Previous value before the change — from `removed` array; NULL if field was empty |
+| `value_id` | String | Unique value change ID — for deduplication |
 
 **`value_added` / `value_removed` field variation by type:**
 - State / Priority / Type: plain string, e.g. `"In Progress"`
@@ -102,13 +102,13 @@ Stores per-issue custom field values that don't fit the core schema. Follows the
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `id_readable` | text | Issue ID — joins to `youtrack_issue.id_readable` |
-| `field_id` | text | Custom field machine ID |
-| `field_name` | text | Custom field human name, e.g. `Team`, `Squad`, `Customer` |
-| `field_value` | text | Field value as string (JSON for complex types) |
-| `value_type` | text | Type hint: `string` / `number` / `user` / `enum` / `json` |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `id_readable` | String | Issue ID — joins to `youtrack_issue.id_readable` |
+| `field_id` | String | Custom field machine ID |
+| `field_name` | String | Custom field human name, e.g. `Team`, `Squad`, `Customer` |
+| `field_value` | String | Field value as string (JSON for complex types) |
+| `value_type` | String | Type hint: `string` / `number` / `user` / `enum` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: captures team, squad, domain, customer, and other org-specific fields without schema changes.
 
@@ -120,14 +120,14 @@ Collected from `/api/issues/{id}/timeTracking/workItems`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `work_item_id` | text | Work item ID |
-| `id_readable` | text | Parent issue ID — joins to `youtrack_issue.id_readable` |
-| `author_youtrack_id` | text | Who logged the time — joins to `youtrack_user.youtrack_id` |
-| `date` | date | Date of work (not collection date) |
-| `duration_minutes` | numeric | Time logged in minutes — from `duration.minutes` |
-| `description` | text | Work item description / comment (nullable) |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `work_item_id` | String | Work item ID |
+| `id_readable` | String | Parent issue ID — joins to `youtrack_issue.id_readable` |
+| `author_youtrack_id` | String | Who logged the time — joins to `youtrack_user.youtrack_id` |
+| `date` | Date | Date of work (not collection date) |
+| `duration_minutes` | Float64 | Time logged in minutes — from `duration.minutes` |
+| `description` | String | Work item description / comment (nullable) |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: actual time spent per person per issue. Complements state-change history — an issue can be "In Progress" for weeks but have only 2 hours of logged work.
 
@@ -139,14 +139,14 @@ Collected from `/api/issues/{id}/comments`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `comment_id` | text | Comment ID |
-| `id_readable` | text | Parent issue ID — joins to `youtrack_issue.id_readable` |
-| `author_youtrack_id` | text | Comment author — joins to `youtrack_user.youtrack_id` |
-| `created_at` | timestamptz | When comment was posted |
-| `updated_at` | timestamptz | Last edit timestamp (NULL if never edited) |
-| `text` | text | Comment body (Markdown) |
-| `deleted` | boolean | Whether the comment has been deleted |
+| `source_instance_id` | String | Connector instance identifier |
+| `comment_id` | String | Comment ID |
+| `id_readable` | String | Parent issue ID — joins to `youtrack_issue.id_readable` |
+| `author_youtrack_id` | String | Comment author — joins to `youtrack_user.youtrack_id` |
+| `created_at` | DateTime64(3) | When comment was posted |
+| `updated_at` | DateTime64(3) | Last edit timestamp (NULL if never edited) |
+| `text` | String | Comment body (Markdown) |
+| `deleted` | Bool | Whether the comment has been deleted |
 
 **Purpose**: collaboration signal — comment volume per person, review participation, cross-team communication.
 
@@ -158,13 +158,13 @@ Collected from `/api/admin/projects`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `project_id` | text | YouTrack internal project ID |
-| `project_key` | text | Short name, e.g. `MON` — joins to `youtrack_issue.project_key` |
-| `name` | text | Full project name |
-| `leader_youtrack_id` | text | Project lead — joins to `youtrack_user.youtrack_id` |
-| `archived` | boolean | Whether the project is archived |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `project_id` | String | YouTrack internal project ID |
+| `project_key` | String | Short name, e.g. `MON` — joins to `youtrack_issue.project_key` |
+| `name` | String | Full project name |
+| `leader_youtrack_id` | String | Project lead — joins to `youtrack_user.youtrack_id` |
+| `archived` | Bool | Whether the project is archived |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: maps issues to teams/departments. Required for team-level aggregations without external configuration.
 
@@ -176,12 +176,12 @@ Collected from `/api/issues/{id}/links`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `source_issue` | text | Source issue ID (`id_readable`) |
-| `target_issue` | text | Target issue ID (`id_readable`) |
-| `link_type` | text | Link type name, e.g. `blocks` / `duplicates` / `relates to` / `subtask of` |
-| `direction` | text | `outward` / `inward` — perspective of the link from the source issue |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `source_issue` | String | Source issue ID (`id_readable`) |
+| `target_issue` | String | Target issue ID (`id_readable`) |
+| `link_type` | String | Link type name, e.g. `blocks` / `duplicates` / `relates to` / `subtask of` |
+| `direction` | String | `outward` / `inward` — perspective of the link from the source issue |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: dependency and blocker analysis. Required for fair productivity measurement — blocked issues should not count against the assignee's throughput.
 
@@ -193,16 +193,16 @@ Collected from `/api/agiles/{boardId}/sprints`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `sprint_id` | text | Sprint ID |
-| `board_id` | text | Agile board ID |
-| `board_name` | text | Agile board name |
-| `sprint_name` | text | Sprint name |
-| `project_key` | text | Associated project — joins to `youtrack_projects.project_key` |
-| `start_date` | date | Sprint start date |
-| `end_date` | date | Sprint end date |
-| `is_completed` | boolean | Whether the sprint is completed |
-| `collected_at` | timestamptz | Collection timestamp |
+| `source_instance_id` | String | Connector instance identifier |
+| `sprint_id` | String | Sprint ID |
+| `board_id` | String | Agile board ID |
+| `board_name` | String | Agile board name |
+| `sprint_name` | String | Sprint name |
+| `project_key` | String | Associated project — joins to `youtrack_projects.project_key` |
+| `start_date` | Date | Sprint start date |
+| `end_date` | Date | Sprint end date |
+| `is_completed` | Bool | Whether the sprint is completed |
+| `collected_at` | DateTime64(3) | Collection timestamp |
 
 **Purpose**: sprint-level analytics — velocity, completion rate, carry-over (issues not finished within the sprint).
 
@@ -212,12 +212,12 @@ Collected from `/api/agiles/{boardId}/sprints`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_instance_id` | text | Connector instance identifier |
-| `youtrack_id` | text | YouTrack internal user ID — joins to `author_youtrack_id` / `reporter_id` / `leader_youtrack_id` |
-| `email` | text | Email — primary key for cross-system identity resolution |
-| `full_name` | text | Display name |
-| `username` | text | Login username |
-| `banned` | boolean | Whether the user account is banned / deactivated |
+| `source_instance_id` | String | Connector instance identifier |
+| `youtrack_id` | String | YouTrack internal user ID — joins to `author_youtrack_id` / `reporter_id` / `leader_youtrack_id` |
+| `email` | String | Email — primary key for cross-system identity resolution |
+| `full_name` | String | Display name |
+| `username` | String | Login username |
+| `banned` | Bool | Whether the user account is banned / deactivated |
 
 ---
 
@@ -225,18 +225,18 @@ Collected from `/api/agiles/{boardId}/sprints`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `run_id` | text | Unique run identifier |
-| `started_at` | timestamp | Run start time |
-| `completed_at` | timestamp | Run end time |
-| `status` | text | `running` / `completed` / `failed` |
-| `issues_collected` | numeric | Rows collected for `youtrack_issue` |
-| `history_records_collected` | numeric | Rows collected for `youtrack_issue_history` |
-| `worklogs_collected` | numeric | Rows collected for `youtrack_worklogs` |
-| `comments_collected` | numeric | Rows collected for `youtrack_comments` |
-| `users_collected` | numeric | Rows collected for `youtrack_user` |
-| `api_calls` | numeric | API calls made |
-| `errors` | numeric | Errors encountered |
-| `settings` | jsonb | Collection configuration (instance URL, project filter, lookback) |
+| `run_id` | String | Unique run identifier |
+| `started_at` | DateTime64(3) | Run start time |
+| `completed_at` | DateTime64(3) | Run end time |
+| `status` | String | `running` / `completed` / `failed` |
+| `issues_collected` | Float64 | Rows collected for `youtrack_issue` |
+| `history_records_collected` | Float64 | Rows collected for `youtrack_issue_history` |
+| `worklogs_collected` | Float64 | Rows collected for `youtrack_worklogs` |
+| `comments_collected` | Float64 | Rows collected for `youtrack_comments` |
+| `users_collected` | Float64 | Rows collected for `youtrack_user` |
+| `api_calls` | Float64 | API calls made |
+| `errors` | Float64 | Errors encountered |
+| `settings` | String | Collection configuration (instance URL, project filter, lookback) |
 
 ---
 

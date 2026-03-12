@@ -52,14 +52,14 @@ No per-user token counts or per-user daily metrics exist in the standard API.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `user_login` | text | GitHub login of the seat holder |
-| `user_email` | text | Email (from linked GitHub account) — identity resolution key |
-| `plan_type` | text | `business` / `enterprise` |
-| `pending_cancellation_date` | date | If seat is scheduled for cancellation (NULL otherwise) |
-| `last_activity_at` | timestamptz | Last recorded Copilot activity across all editors |
-| `last_activity_editor` | text | Editor used in last activity, e.g. `vscode`, `jetbrains` |
-| `created_at` | timestamptz | When the seat was assigned |
-| `updated_at` | timestamptz | Last seat record update |
+| `user_login` | String | GitHub login of the seat holder |
+| `user_email` | String | Email (from linked GitHub account) — identity resolution key |
+| `plan_type` | String | `business` / `enterprise` |
+| `pending_cancellation_date` | Date | If seat is scheduled for cancellation (NULL otherwise) |
+| `last_activity_at` | DateTime64(3) | Last recorded Copilot activity across all editors |
+| `last_activity_editor` | String | Editor used in last activity, e.g. `vscode`, `jetbrains` |
+| `created_at` | DateTime64(3) | When the seat was assigned |
+| `updated_at` | DateTime64(3) | Last seat record update |
 
 One row per user. `last_activity_at` is the only per-user usage signal available in the Copilot API.
 
@@ -69,15 +69,15 @@ One row per user. `last_activity_at` is the only per-user usage signal available
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `date` | date | Usage date — primary key |
-| `total_suggestions_count` | numeric | Code completion suggestions shown |
-| `total_acceptances_count` | numeric | Suggestions accepted (tab) |
-| `total_lines_suggested` | numeric | Lines of code suggested |
-| `total_lines_accepted` | numeric | Lines of code accepted |
-| `total_active_users` | numeric | Users with at least one completion interaction |
-| `total_chat_turns` | numeric | Copilot Chat interactions (IDE + github.com) |
-| `total_chat_acceptances` | numeric | Code blocks accepted from chat |
-| `total_active_chat_users` | numeric | Users who used Copilot Chat |
+| `date` | Date | Usage date — primary key |
+| `total_suggestions_count` | Float64 | Code completion suggestions shown |
+| `total_acceptances_count` | Float64 | Suggestions accepted (tab) |
+| `total_lines_suggested` | Float64 | Lines of code suggested |
+| `total_lines_accepted` | Float64 | Lines of code accepted |
+| `total_active_users` | Float64 | Users with at least one completion interaction |
+| `total_chat_turns` | Float64 | Copilot Chat interactions (IDE + github.com) |
+| `total_chat_acceptances` | Float64 | Code blocks accepted from chat |
+| `total_active_chat_users` | Float64 | Users who used Copilot Chat |
 
 Org-level only — no per-user breakdown. Enables trend analysis of overall adoption without individual attribution.
 
@@ -87,14 +87,14 @@ Org-level only — no per-user breakdown. Enables trend analysis of overall adop
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `date` | date | Usage date |
-| `language` | text | Programming language, e.g. `python`, `typescript`, `go` |
-| `editor` | text | Editor, e.g. `vscode`, `jetbrains`, `neovim`, `vim`, `xcode` |
-| `suggestions_count` | numeric | Suggestions shown for this language × editor |
-| `acceptances_count` | numeric | Suggestions accepted |
-| `lines_suggested` | numeric | Lines suggested |
-| `lines_accepted` | numeric | Lines accepted |
-| `active_users` | numeric | Active users for this language × editor combination |
+| `date` | Date | Usage date |
+| `language` | String | Programming language, e.g. `python`, `typescript`, `go` |
+| `editor` | String | Editor, e.g. `vscode`, `jetbrains`, `neovim`, `vim`, `xcode` |
+| `suggestions_count` | Float64 | Suggestions shown for this language × editor |
+| `acceptances_count` | Float64 | Suggestions accepted |
+| `lines_suggested` | Float64 | Lines suggested |
+| `lines_accepted` | Float64 | Lines accepted |
+| `active_users` | Float64 | Active users for this language × editor combination |
 
 One row per `(date, language, editor)`. Enables analysis of adoption by editor and language without per-user resolution.
 
@@ -104,16 +104,16 @@ One row per `(date, language, editor)`. Enables analysis of adoption by editor a
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `run_id` | text | Unique run identifier |
-| `started_at` | timestamp | Run start time |
-| `completed_at` | timestamp | Run end time |
-| `status` | text | `running` / `completed` / `failed` |
-| `seats_collected` | numeric | Rows collected for `copilot_seats` |
-| `usage_records_collected` | numeric | Rows collected for `copilot_usage` |
-| `breakdown_records_collected` | numeric | Rows collected for `copilot_usage_breakdown` |
-| `api_calls` | numeric | API calls made |
-| `errors` | numeric | Errors encountered |
-| `settings` | jsonb | Collection configuration (org, lookback period) |
+| `run_id` | String | Unique run identifier |
+| `started_at` | DateTime64(3) | Run start time |
+| `completed_at` | DateTime64(3) | Run end time |
+| `status` | String | `running` / `completed` / `failed` |
+| `seats_collected` | Float64 | Rows collected for `copilot_seats` |
+| `usage_records_collected` | Float64 | Rows collected for `copilot_usage` |
+| `breakdown_records_collected` | Float64 | Rows collected for `copilot_usage_breakdown` |
+| `api_calls` | Float64 | API calls made |
+| `errors` | Float64 | Errors encountered |
+| `settings` | String | Collection configuration (org, lookback period) |
 
 Monitoring table — not an analytics source.
 

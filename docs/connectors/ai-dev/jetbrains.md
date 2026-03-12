@@ -78,21 +78,21 @@ The JetBrains AI Enterprise admin panel provides an organization-level REST API 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `user_id` | text | JetBrains account user ID — primary key fragment |
-| `email` | text | User email — identity key |
-| `date` | date | Activity date — primary key fragment (composite PK: `user_id` + `date`) |
-| `is_active` | boolean | Whether user had any AI activity this day |
-| `completions_shown` | numeric | AI inline completion suggestions shown |
-| `completions_accepted` | numeric | Inline completion suggestions accepted |
-| `chat_messages` | numeric | AI chat messages sent (JetBrains AI chat panel) |
-| `chat_sessions` | numeric | Distinct chat sessions started |
-| `active_days_in_period` | numeric | Rolling active days (may be provided as a period aggregate) |
-| `most_used_model` | text | Most used AI model that day, e.g. `gpt-4o`, `claude-3.5-sonnet` |
-| `models_used` | text | JSON array of distinct model identifiers used that day |
-| `ide_product_code` | text | JetBrains IDE product code, e.g. `IU` (IntelliJ IDEA Ultimate), `PY` (PyCharm), `GO` (GoLand), `WS` (WebStorm) |
-| `ide_version` | text | IDE build version, e.g. `243.22562.218` |
-| `plugin_version` | text | JetBrains AI Assistant plugin version |
-| `metadata` | text | Full API response (String (JSON)) |
+| `user_id` | String | JetBrains account user ID — primary key fragment |
+| `email` | String | User email — identity key |
+| `date` | Date | Activity date — primary key fragment (composite PK: `user_id` + `date`) |
+| `is_active` | Bool | Whether user had any AI activity this day |
+| `completions_shown` | Float64 | AI inline completion suggestions shown |
+| `completions_accepted` | Float64 | Inline completion suggestions accepted |
+| `chat_messages` | Float64 | AI chat messages sent (JetBrains AI chat panel) |
+| `chat_sessions` | Float64 | Distinct chat sessions started |
+| `active_days_in_period` | Float64 | Rolling active days (may be provided as a period aggregate) |
+| `most_used_model` | String | Most used AI model that day, e.g. `gpt-4o`, `claude-3.5-sonnet` |
+| `models_used` | String | JSON array of distinct model identifiers used that day |
+| `ide_product_code` | String | JetBrains IDE product code, e.g. `IU` (IntelliJ IDEA Ultimate), `PY` (PyCharm), `GO` (GoLand), `WS` (WebStorm) |
+| `ide_version` | String | IDE build version, e.g. `243.22562.218` |
+| `plugin_version` | String | JetBrains AI Assistant plugin version |
+| `metadata` | String | Full API response (String (JSON)) |
 
 Natural key is `(user_id, date)`. No surrogate primary key — consistent with `windsurf_daily_usage` pattern where natural key is used.
 
@@ -102,16 +102,16 @@ Natural key is `(user_id, date)`. No surrogate primary key — consistent with `
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `user_id` | text | JetBrains account user ID — primary key |
-| `email` | text | User email — identity key |
-| `display_name` | text | User display name |
-| `username` | text | JetBrains account username (login) |
-| `role` | text | Organization role: `member` / `admin` |
-| `status` | text | Account status: `active` / `inactive` / `pending` |
-| `created_at` | timestamp | When the user was added to the organization |
-| `last_seen_at` | timestamp | Last recorded activity timestamp (any JetBrains service) |
-| `ingestion_at` | timestamp | When this row was collected — cursor for incremental sync |
-| `metadata` | text | Full API response (String (JSON)) |
+| `user_id` | String | JetBrains account user ID — primary key |
+| `email` | String | User email — identity key |
+| `display_name` | String | User display name |
+| `username` | String | JetBrains account username (login) |
+| `role` | String | Organization role: `member` / `admin` |
+| `status` | String | Account status: `active` / `inactive` / `pending` |
+| `created_at` | DateTime64(3) | When the user was added to the organization |
+| `last_seen_at` | DateTime64(3) | Last recorded activity timestamp (any JetBrains service) |
+| `ingestion_at` | DateTime64(3) | When this row was collected — cursor for incremental sync |
+| `metadata` | String | Full API response (String (JSON)) |
 
 ---
 
@@ -119,15 +119,15 @@ Natural key is `(user_id, date)`. No surrogate primary key — consistent with `
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `run_id` | text | Unique run identifier |
-| `started_at` | timestamp | Run start time |
-| `completed_at` | timestamp | Run end time |
-| `status` | text | `running` / `completed` / `failed` |
-| `activity_records_collected` | numeric | Rows collected for `jetbrains_activity` |
-| `users_collected` | numeric | Rows collected for `jetbrains_users` |
-| `api_calls` | numeric | API calls made |
-| `errors` | numeric | Errors encountered |
-| `settings` | text | Collection configuration (org ID, lookback period) (String (JSON)) |
+| `run_id` | String | Unique run identifier |
+| `started_at` | DateTime64(3) | Run start time |
+| `completed_at` | DateTime64(3) | Run end time |
+| `status` | String | `running` / `completed` / `failed` |
+| `activity_records_collected` | Float64 | Rows collected for `jetbrains_activity` |
+| `users_collected` | Float64 | Rows collected for `jetbrains_users` |
+| `api_calls` | Float64 | API calls made |
+| `errors` | Float64 | Errors encountered |
+| `settings` | String | Collection configuration (org ID, lookback period) (String (JSON)) |
 
 Monitoring table — not an analytics source.
 

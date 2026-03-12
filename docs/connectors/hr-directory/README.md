@@ -433,7 +433,7 @@ sequenceDiagram
 | `termination_date` | DateTime | Employment end date; NULL if not terminated |
 | `location` | String | Office location or `Remote` |
 | `country` | String | ISO 3166-1 alpha-2 country code |
-| `fte` | numeric | FTE fraction (0.0–1.0); NULL if not provided by source |
+| `fte` | Float64 | FTE fraction (0.0–1.0); NULL if not provided by source |
 | `custom_str_attrs` | Map(String, String) | Workspace-specific string attributes (e.g. `functional_team`, `division`) |
 | `custom_num_attrs` | Map(String, Float64) | Workspace-specific numeric attributes (e.g. scores, targets) |
 | `ingested_at` | DateTime | Timestamp when this row was written by the ETL Job |
