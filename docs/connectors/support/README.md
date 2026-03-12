@@ -1,7 +1,7 @@
 # Support Connector Specification (Multi-Source)
 
-> Version 1.0 — March 2026
-> Based on: Zendesk (planned Source 21) and JSM (planned Source 22)
+> Version 1.1 — March 2026
+> Based on: Zendesk (Source 21) and JSM (Source 22)
 
 Data-source agnostic specification for support and helpdesk connectors. Defines unified Bronze schemas that work across Zendesk and Jira Service Management (JSM) using a `data_source` discriminator column.
 
@@ -15,6 +15,7 @@ Data-source agnostic specification for support and helpdesk connectors. Defines 
   - [`support_ticket_events` — Append-only audit log](#supportticketevents-append-only-audit-log)
   - [`support_agents` — Agent directory](#supportagents-agent-directory)
   - [`support_collection_runs` — Connector execution log](#supportcollectionruns-connector-execution-log)
+  - [`support_sla` — SLA policy status per ticket (JSM only)](#supportsla-sla-policy-status-per-ticket-jsm-only)
 - [Source Mapping](#source-mapping)
   - [Zendesk](#zendesk)
   - [JSM](#jsm)
@@ -35,11 +36,11 @@ Data-source agnostic specification for support and helpdesk connectors. Defines 
 
 **Supported Sources**:
 - Zendesk (`data_source = "insight_zendesk"`)
-- Jira Service Management (`data_source = "insight_jsm"`) — planned
+- Jira Service Management (`data_source = "insight_jsm"`)
 
 **Authentication**:
-- Zendesk: API token (email/token Basic Auth) or OAuth 2.0
-- JSM: API token + email (Atlassian Cloud) or Basic Auth (Server/Data Center)
+- Zendesk: API token (email/token Basic Auth) or OAuth 2.0. Token created under Admin → Apps & Integrations → Zendesk API.
+- JSM: Basic Auth (`{email}:{api_token}` Base64-encoded) or OAuth 2.0 (3LO). Token created under Atlassian Account → Security → API tokens. Base URL: `https://{domain}.atlassian.net`.
 
 **Identity**: `support_agents.email` — support agents resolved to canonical `person_id` via Identity Manager. External customers (ticket requesters) are **not** resolved to `person_id`.
 
@@ -56,6 +57,7 @@ Data-source agnostic specification for support and helpdesk connectors. Defines 
 | Handler | Agent | Assignee | `support_agents` |
 | Status change / comment | Audit | Changelog / Comment | `support_ticket_events` |
 | Customer rating | Satisfaction rating | Customer satisfaction | `satisfaction_score` |
+| SLA policy status | (pre-computed on ticket `metric_set`) | SLA policy object with breach status | `support_sla` (JSM only) |
 
 ---
 
@@ -179,6 +181,16 @@ Monitoring table — not an analytics source.
 
 ---
 
+### `support_sla` — SLA policy status per ticket (JSM only)
+
+JSM-specific table — not produced by the Zendesk connector. Captures SLA policy breach and compliance status per ticket at collection time. See `docs/connectors/support/jsm.md` for the full field definition.
+
+JSM exposes explicit SLA policy objects (via `GET /rest/servicedeskapi/request/{id}/sla`) with breach status, remaining time, and goal targets. Zendesk pre-computes equivalent timing metrics directly on ticket objects (`metric_set`) and does not expose SLA policy objects via its API — so there is no Zendesk equivalent of this table.
+
+**Silver target**: `class_support_sla` — planned; SLA compliance per ticket per policy, enables breach-rate and compliance-rate Gold metrics.
+
+---
+
 ## Source Mapping
 
 ### Zendesk
@@ -200,14 +212,23 @@ Monitoring table — not an analytics source.
 
 ### JSM
 
-*Planned.* JSM (Jira Service Management) exposes ticket data through the Jira REST API v3 and the JSM-specific service desk endpoints.
+**API**: Atlassian REST API v3 (`https://{domain}.atlassian.net/rest/api/3/`) + Service Desk API v1 (`https://{domain}.atlassian.net/rest/servicedeskapi/`).
+
+**`data_source`**: `"insight_jsm"`
+
+**`source_instance_id`**: Atlassian domain slug, e.g. `jsm-acme-prod`.
 
 | Unified table | JSM source | Key mapping notes |
 |---------------|-----------|-------------------|
-| `support_tickets` | `GET /rest/servicedeskapi/servicedesk/{id}/issue` | `id` → `ticket_id`; `fields.assignee.accountId` → `assignee_id`; JSM status → normalised `status`; `fields.priority.name` → `priority` |
-| `support_ticket_events` | `GET /rest/api/3/issue/{key}/changelog` + `GET /rest/api/3/issue/{key}/comment` | Changelog entries → `field_change` / `status_change`; comments → `comment` |
-| `support_agents` | `GET /rest/api/3/users/search?query=&accountType=atlassian` + JSM agent role filter | `accountId` → `agent_id`; `emailAddress` → `email`; `displayName` → `display_name` |
+| `support_tickets` | `GET /rest/api/3/search?jql=project+in+({keys})` + `GET /rest/api/3/issue/{id}` | `id` → `ticket_id`; `fields.summary` → `subject`; `fields.assignee.accountId` → `assignee_id`; JSM status → normalised `status` (see jsm.md mapping table); `fields.priority.name` → `priority`; `fields.issuetype.name` → `ticket_type`; `fields.reporter.accountId` → `requester_id`; `solved_at` and timing fields derived from changelog at Silver |
+| `support_ticket_events` | `GET /rest/api/3/issue/{id}/changelog` + `GET /rest/api/3/issue/{id}/comment` | Each changelog item → one row (`status_change` / `assignment` / `field_change`); each comment → one row (`comment`); `author.accountId` → `author_id`; ADF comment body → `comment_body` |
+| `support_agents` | `GET /rest/api/3/users/search?accountType=atlassian` | `accountId` → `agent_id`; `emailAddress` → `email`; `displayName` → `display_name`; `active` → `is_active` |
+| `support_sla` | `GET /rest/servicedeskapi/request/{issueIdOrKey}/sla` | One row per SLA policy per ticket; `ongoingCycle.breached` → `is_breached`; `ongoingCycle.paused` → `is_paused`; `ongoingCycle.remainingTime.millis` ÷ 1000 → `remaining_seconds`; `completedCycles[-1].breachTime` → `breached_at` |
 | `support_collection_runs` | Connector-generated | Written at start and end of each run |
+
+**Incremental sync**: discover issues via JQL `updated >= "{cursor}"` scoped to service desk project keys. Changelog requires one API call per issue (`GET /rest/api/3/issue/{id}/changelog`, paginated). SLA collection via `GET /rest/servicedeskapi/request/{id}/sla` is an additional per-issue call — see OQ-JSM-2 for frequency trade-offs.
+
+**JSM project discovery**: `GET /rest/api/3/project?typeKey=service_desk` returns all JSM projects. `service_desk_id` (from `GET /rest/servicedeskapi/servicedesk`) is required for SLA and queue API calls and differs from Jira's `project_id`.
 
 ---
 
@@ -242,6 +263,7 @@ support_ticket_events.author_id
 | `support_tickets` + `support_ticket_events` | `class_support_activity` | Per-agent per-day ticket metrics with resolved `person_id` |
 | `support_agents` | Identity Manager (`email` → `person_id`) | Used for identity resolution |
 | `support_tickets` | Reference — ticket context | Used to enrich `class_support_activity` with ticket type, priority, satisfaction |
+| `support_sla` | `class_support_sla` | JSM only — SLA compliance per ticket per policy; planned Silver stream |
 
 **`class_support_activity`** — Silver target: per-agent per-day support activity metrics.
 

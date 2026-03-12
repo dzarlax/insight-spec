@@ -126,7 +126,7 @@ name = "Jira Connector Specification"
 
 [[systems.artifacts]]
 kind = "DESIGN"
-path = "docs/connectors/task-tracking/jsm.md"
+path = "docs/connectors/support/jsm.md"
 name = "Jira Service Management Connector Specification"
 
 # ── Connectors — Collaboration ────────────────────────────────────────────────

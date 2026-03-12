@@ -43,7 +43,6 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 | Task Tracking (unified schema) | [`task-tracking/README.md`](task-tracking/README.md) | Draft |
 | YouTrack | [`task-tracking/youtrack.md`](task-tracking/youtrack.md) | Proposed |
 | Jira | [`task-tracking/jira.md`](task-tracking/jira.md) | Proposed |
-| Jira Service Management | [`task-tracking/jsm.md`](task-tracking/jsm.md) | Draft |
 
 ### Collaboration
 
@@ -69,7 +68,7 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 |--------|------|--------|
 | Support (unified schema) | [`support/README.md`](support/README.md) | Draft |
 | Zendesk | [`support/zendesk.md`](support/zendesk.md) | Draft |
-| Jira Service Management | [`task-tracking/jsm.md`](task-tracking/jsm.md) | Draft |
+| Jira Service Management | [`support/jsm.md`](support/jsm.md) | Draft |
 
 ### AI Dev Tools
 
@@ -131,7 +130,7 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 | `class_wiki_activity` | Confluence + Outline | [`wiki/README.md`](wiki/README.md) |
 | `class_support_activity` | Zendesk + JSM | [`support/README.md`](support/README.md) |
 | `class_design_activity` | Figma | [`design/README.md`](design/README.md) |
-| Task Tracker unified schema | YouTrack + Jira + JSM | [`task-tracking/README.md`](task-tracking/README.md) |
+| Task Tracker unified schema | YouTrack + Jira | [`task-tracking/README.md`](task-tracking/README.md) |
 | `class_people` + `class_org_units` | BambooHR + Workday + LDAP | [`hr-directory/README.md`](hr-directory/README.md) |
 | `class_ai_dev_usage` | Cursor + Windsurf + Copilot + JetBrains + Claude Code | [`ai-dev/`](ai-dev/) |
 
