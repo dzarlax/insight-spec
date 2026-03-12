@@ -133,11 +133,10 @@ Only `copilot_seats` has user-level data. `user_email` is the primary identity k
 
 | Bronze table | Silver target | Status |
 |-------------|--------------|--------|
-| `copilot_seats` | *(seat roster — activity signal only)* | Available — `last_activity_at` is the only per-user metric |
-| `copilot_usage` | `class_ai_dev_usage` (org-level rows) | Planned — org-level aggregate, no `person_id` |
-| `copilot_usage_breakdown` | *(org analytics)* | Available — language/editor adoption, no Silver target yet |
+| `copilot_seats` | `class_ai_dev_usage` | Planned — `last_activity_at` as binary active signal (no completions metrics) |
+| `copilot_usage` + `copilot_usage_breakdown` | `class_ai_org_usage` | Planned — org-level aggregates, no `person_id`; keyed by `(workspace_id, date, tool)` |
 
-**Gold**: GitHub Copilot adoption metrics (active users trend, acceptance rate, lines accepted per day, editor/language distribution). Per-user Gold metrics are not possible from Copilot API data alone — only the seat roster's `last_activity_at` provides any per-user signal.
+**Gold**: GitHub Copilot adoption metrics (active users trend, acceptance rate, lines accepted per day, editor/language distribution) read from Silver `class_ai_org_usage`. Per-user activity signal (binary active/inactive per period) read from Silver `class_ai_dev_usage`. Gold never reads Bronze directly.
 
 ---
 
@@ -150,9 +149,7 @@ GitHub Copilot does not expose per-user daily usage. When building `class_ai_dev
 - Cursor and Windsurf contribute per-user daily rows with acceptance rates, lines added, etc.
 - Copilot can only contribute org-level aggregate rows and seat-level last-activity timestamps.
 
-- Should `class_ai_dev_usage` allow org-level rows (with `person_id = NULL`)?
-- Or should Copilot aggregate data go into a separate `class_ai_org_usage` stream?
-- Is `copilot_seats.last_activity_at` sufficient as a "user was active" signal for per-user Gold metrics?
+**CLOSED.** `class_ai_org_usage` Silver stream IS created for org-level GitHub Copilot data. Rationale: Bronze data cannot be read directly at Gold level — Identity Resolution has not run on Bronze, and `workspace_id` isolation is enforced at Silver. `copilot_usage` and `copilot_usage_breakdown` feed into `class_ai_org_usage` (keyed by `workspace_id + date + tool`, no `person_id`). For per-user data: `copilot_seats.last_activity_at` feeds into `class_ai_dev_usage` as a binary activity signal (no completions metrics).
 
 ### OQ-COP-2: `last_activity_at` as a proxy for active usage
 

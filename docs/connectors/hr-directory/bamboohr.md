@@ -135,9 +135,9 @@ Monitoring table — not an analytics source.
 | `bamboohr_employees` | Identity Manager (email → `person_id`) | ✓ Feeds identity resolution directly |
 | `bamboohr_employees` | `class_people` | Planned — HR unified stream not yet defined |
 | `bamboohr_departments` | *(reference table)* | Available — no unified stream defined yet |
-| `bamboohr_leave_requests` | `class_leave` | Planned — leave unified stream not yet defined |
+| `bamboohr_leave_requests` | `class_people` | Leave periods captured as `status = 'on_leave'` transitions in SCD2 |
 
-**Gold**: Org hierarchy (team-level metric aggregation), leave analytics (burnout risk, availability), and headcount metrics will derive from a future HR Silver layer once `class_people` and `class_leave` streams are defined.
+**Gold**: Org hierarchy (team-level metric aggregation), leave analytics (burnout risk, availability), and headcount metrics will derive from a future HR Silver layer once `class_people` is defined.
 
 ---
 

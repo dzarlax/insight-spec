@@ -127,8 +127,7 @@ Monitoring table — not an analytics source.
 
 A developer may use both ChatGPT Team (via web/desktop) and the OpenAI API (programmatic calls). The same person generates usage in both.
 
-- Should `class_ai_tool_usage` (conversational) and `class_ai_api_usage` (programmatic) be kept separate?
-- Or should there be a unified `class_ai_usage` that merges all OpenAI + Anthropic product usage by `person_id`?
+**CLOSED.** `class_ai_tool_usage` (conversational) and `class_ai_api_usage` (programmatic) are kept as separate Silver streams. They serve different analytics purposes: `class_ai_tool_usage` measures AI assistant adoption (chat interactions, seat utilization), while `class_ai_api_usage` measures programmatic API spend and throughput. A unified `class_ai_usage` stream will NOT be created — three separate streams are maintained: `class_ai_dev_usage` (IDE/coding tools), `class_ai_api_usage` (programmatic API), and `class_ai_tool_usage` (chat/assistant tools). Cross-stream analysis by `person_id` can be performed at Gold level without collapsing the Silver schemas.
 
 ### OQ-CGT-2: Parallel to Claude Team — unified Silver stream
 

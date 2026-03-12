@@ -136,10 +136,8 @@ See also: `CONNECTORS_REFERENCE.md` OQ-3.
 
 ### OQ-CAPI-2: `class_ai_api_usage` Silver design — nullable `person_id`
 
-When `user_id` is NULL (uninstrumented requests), the Silver row has no person attribution. Options:
+**CLOSED.** `class_ai_api_usage` is the single Silver target for all Claude API usage. Rows with `person_id = NULL` are valid and represent unattributed API usage (requests where `X-Anthropic-User-Id` was not set). There is no separate `class_ai_usage` stream — that name was considered but will not be created.
 
-- Store rows with `person_id = NULL` (partial attribution Silver table)
-- Separate `class_ai_api_usage` (per-key, no person) from `class_ai_usage` (per-person, when available)
-- Track per-key usage in Gold without a Silver unification step
+Both `claude_api_daily_usage` (key-level aggregates) and `claude_api_requests` (per-request events with optional user attribution) map to `class_ai_api_usage`. NULL `person_id` rows are queryable at Gold level for cost attribution by API key and application even without person resolution.
 
 See also: `CONNECTORS_REFERENCE.md` OQ-3.

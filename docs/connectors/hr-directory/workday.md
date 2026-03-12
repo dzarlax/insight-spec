@@ -153,7 +153,7 @@ Monitoring table — not an analytics source.
 | `workday_workers` | Identity Manager (email → `person_id`) | ✓ Feeds identity resolution directly |
 | `workday_workers` | `class_people` | Planned — HR unified stream not yet defined |
 | `workday_organizations` | *(reference table)* | Available — no unified stream defined yet |
-| `workday_leave` | `class_leave` | Planned — leave unified stream not yet defined |
+| `workday_leave` | `class_people` | Leave periods captured as `status = 'on_leave'` transitions in SCD2 |
 
 **Gold**: Historical org structure (team composition over time), leave analytics (burnout risk, availability), and headcount metrics. Effective dating in `workday_workers` enables point-in-time queries — "what was the team composition in Q3 2025?" — which is not possible with BambooHR.
 
