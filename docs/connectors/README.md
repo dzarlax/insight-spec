@@ -105,14 +105,6 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 | HubSpot | [`crm/hubspot.md`](crm/hubspot.md) | Proposed |
 | Salesforce | [`crm/salesforce.md`](crm/salesforce.md) | Proposed |
 
-### Wiki
-
-| Source | Spec | Status |
-|--------|------|--------|
-| Wiki (unified schema) | [`wiki/README.md`](wiki/README.md) | Draft |
-| Confluence | [`wiki/confluence.md`](wiki/confluence.md) | Draft |
-| Outline | [`wiki/outline.md`](wiki/outline.md) | Draft |
-
 ### Design Tools
 
 | Source | Spec | Status |
@@ -132,7 +124,7 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 
 | Stream | Sources | Spec |
 |--------|---------|------|
-| `class_communication_metrics` | M365 (Email + Teams) + Zulip + Slack | [`collaboration/README.md`](collaboration/README.md) |
+| `class_communication_metrics` | M365 + Zulip + Slack + Zoom | [`collaboration/README.md`](collaboration/README.md) |
 | `class_document_metrics` | M365 (OneDrive + SharePoint) | [`collaboration/README.md`](collaboration/README.md) — planned |
 | `class_wiki_pages` | Confluence + Outline | [`wiki/README.md`](wiki/README.md) |
 | `class_wiki_activity` | Confluence + Outline | [`wiki/README.md`](wiki/README.md) |
@@ -141,11 +133,6 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 | Task Tracker unified schema | YouTrack + Jira | [`task-tracking/README.md`](task-tracking/README.md) |
 | `class_people` + `class_org_units` | BambooHR + Workday + LDAP | [`hr-directory/README.md`](hr-directory/README.md) |
 | `class_ai_dev_usage` | Cursor + Windsurf + Copilot + JetBrains + Claude Code | [`ai-dev/`](ai-dev/) |
-| `class_communication_metrics` | M365 (Email + Teams) + Zulip | [`collaboration/README.md`](collaboration/README.md) |
-| `class_document_metrics` | M365 (OneDrive + SharePoint) | [`collaboration/README.md`](collaboration/README.md) — planned |
-| Task Tracker unified schema | YouTrack + Jira | [`task-tracking/README.md`](task-tracking/README.md) |
-| `class_wiki_pages` | Confluence + Outline | [`wiki/README.md`](wiki/README.md) — draft |
-| `class_wiki_activity` | Confluence + Outline | [`wiki/README.md`](wiki/README.md) — draft |
 
 ---
 

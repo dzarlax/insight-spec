@@ -60,9 +60,9 @@ Data-source agnostic specification for Version Control connectors. Defines unifi
 - Single query across all git sources
 - Consistent identity resolution regardless of source
 - Global deduplication by `commit_hash`
-- Simplified Silver layer transformation (git_* tables are already unified; Silver adds identity resolution and workspace isolation)
+- Simplified Gold layer transformation
 
-**Source-specific fields**: Platform-specific features (e.g., GitHub's formal review states, Bitbucket's task count) are stored in the `metadata` JSON column and can be extracted in Silver layer if needed.
+**Source-specific fields**: Platform-specific features (e.g., GitHub's formal review states, Bitbucket's task count) are stored in the `metadata` JSON column and can be extracted in Gold layer if needed.
 
 ---
 
@@ -723,7 +723,7 @@ WHERE ext.property_key = 'hotfix_flag'
 **Resolution process**:
 1. Extract email from `git_commits.author_email` and `git_pull_requests_reviewers.reviewer_email`
 2. Normalize email (lowercase, trim whitespace)
-3. Map to canonical `person_id` via Identity Manager in Silver step 2
+3. Map to canonical `person_id` via Identity Manager in Gold step 2
 4. If email absent/masked, attempt resolution by `author_name` or `author_uuid` with source context
 5. Create new `person_id` if no match found
 
@@ -735,16 +735,15 @@ WHERE ext.property_key = 'hotfix_flag'
 
 ## Silver / Gold Mappings
 
-| Silver table | Silver target | Status |
+| Silver table | Gold target | Status |
 |-------------|--------------|--------|
 | `git_repositories` | *(reference table)* | No unified stream — used for filtering and metadata |
 | `git_repositories_ext` | *(aggregated metrics)* | Used for repository analytics dashboards and health scoring |
 | `git_repository_branches` | *(reference table)* | No unified stream — used for incremental sync |
 | `git_commits` | `class_commits` | Planned — stream not yet defined |
-| `git_commits_ext` | *(enrichment data)* | Merged into `class_commits` during Silver transformation |
+| `git_commits_ext` | *(enrichment data)* | Merged into `class_commits` during Gold transformation |
 | `git_pull_requests` | `class_pr_activity` | Planned — stream not yet defined |
 | `git_pull_requests_ext` | *(enrichment data)* | Merged into `class_pr_activity` during Gold transformation |
-| `git_pull_requests_ext` | *(enrichment data)* | Merged into `class_pr_activity` during Silver transformation |
 | `git_tickets` | Cross-domain join → `class_task_tracker_activities.task_id` | Planned |
 | `git_commit_files` | *(granular detail)* | Available — no unified stream defined yet |
 | `git_pull_requests_reviewers` | *(review analytics)* | Available — aggregated into PR-level metrics |
@@ -752,7 +751,7 @@ WHERE ext.property_key = 'hotfix_flag'
 | `git_pull_requests_commits` | *(junction)* | Used internally for PR↔commit linkage |
 
 **Planned Gold streams**:
-**Planned Silver streams**:
+- `class_commits`: Deduplicated commits with resolved `person_id`, language breakdown, and AI detection flags
 - `class_pr_activity`: PR lifecycle events with review depth metrics and cycle time calculations
 
 **Gold metrics**:
@@ -804,7 +803,7 @@ When a repository is mirrored across GitHub and Bitbucket, the same `commit_hash
 
 **Question**: Which approach best serves analytics needs?
 
-**Consideration**: Different sources may have different metadata quality (e.g., GitHub has better language detection). Keeping both records allows choosing best metadata at Silver layer.
+**Consideration**: Different sources may have different metadata quality (e.g., GitHub has better language detection). Keeping both records allows choosing best metadata at Gold layer.
 
 ---
 
