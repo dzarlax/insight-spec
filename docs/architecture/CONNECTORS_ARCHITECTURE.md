@@ -619,6 +619,71 @@ Some connectors do not write to a Silver stream — instead they produce referen
 
 ---
 
+## Custom Fields Pattern
+
+Many source systems (YouTrack, Jira, BambooHR, Workday, HubSpot, Salesforce, Zendesk, JSM) support workspace-specific custom fields that cannot be predicted at schema design time. The platform handles these via a two-layer extensibility pattern:
+
+### Bronze: `_ext` key-value table
+
+Every connector that ingests objects with custom fields MUST produce a companion `{source}_{entity}_ext` table using the key-value pattern:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `source_instance_id` | String | Connector instance identifier |
+| `entity_id` | String | Parent entity key (e.g. `id_readable`, `employee_id`, `ticket_id`) |
+| `field_id` | String | Custom field machine ID or API key |
+| `field_name` | String | Custom field display name (e.g. `Team`, `Squad`, `Customer`, `Division`) |
+| `field_value` | String | Field value as string; JSON for complex types |
+| `value_type` | String | Type hint: `string` / `number` / `user` / `enum` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+| `data_source` | String | Source discriminator |
+| `_version` | UInt64 | Deduplication version |
+
+**Purpose**: captures any custom field without schema changes. The connector discovers available custom fields via the source API (e.g. `GET /rest/api/3/field` for Jira, `GET /api/admin/customFields` for YouTrack, custom properties endpoint for HubSpot) and writes one row per field value per entity.
+
+### Silver: `Map(String, String)` + `Map(String, Float64)` columns
+
+All Silver unified tables that represent entities with potential custom fields MUST include two Map columns:
+
+```
+custom_str_attrs  Map(String, String)   -- workspace-specific string attributes
+custom_num_attrs  Map(String, Float64)  -- workspace-specific numeric attributes
+```
+
+During Silver Step 1 (Bronze → unified schema), the ETL reads a per-workspace **Custom Attributes Configuration** that declares which `field_name` values from `_ext` tables should be promoted and whether each is string or numeric. Only configured fields are promoted — all others remain queryable via the Bronze `_ext` table.
+
+**Example configuration**:
+```yaml
+# workspace: acme-corp
+# source: youtrack
+custom_fields:
+  - field_name: "Squad"
+    target_key: "squad"
+    type: string
+  - field_name: "Customer"
+    target_key: "customer"
+    type: string
+  - field_name: "Story Points Actual"
+    target_key: "sp_actual"
+    type: number
+```
+
+**Result in Silver**: `custom_str_attrs = {'squad': 'Platform', 'customer': 'Acme'}`, `custom_num_attrs = {'sp_actual': 3.0}`
+
+**HR exception**: `class_people` uses this pattern natively — `custom_str_attrs` and `custom_num_attrs` are populated directly from BambooHR/Workday custom employee fields without a Bronze `_ext` table (HR systems expose custom fields in the main employee response).
+
+### Domains and applicable tables
+
+| Domain | Bronze `_ext` tables | Silver Map columns |
+|--------|---------------------|-------------------|
+| Task Tracking | `task_tracker_issue_ext` (from `youtrack_issue_ext`, `jira_issue_ext`) | `task_tracker_issues.custom_str_attrs` / `custom_num_attrs` |
+| CRM | `hubspot_contact_ext`, `hubspot_deal_ext`, `salesforce_opportunity_ext`, `salesforce_contact_ext` | `crm_deals.custom_str_attrs` / `custom_num_attrs` |
+| Support | `zendesk_ticket_ext`, `jsm_ticket_ext` | `support_tickets.custom_str_attrs` / `custom_num_attrs` |
+| HR | *(no Bronze ext — custom fields in main response)* | `class_people.custom_str_attrs` / `custom_num_attrs` ✓ |
+| Git | `git_repositories_ext`, `git_commits_ext`, `git_pull_requests_ext` | *(no Maps — git objects have no custom fields)* |
+
+---
+
 ## Security Considerations
 
 1. **Credential Management**: All secrets via environment variables or secret manager

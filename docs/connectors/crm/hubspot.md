@@ -13,6 +13,9 @@ Standalone specification for the HubSpot (CRM) connector. Expands Source 16 in t
   - [`hubspot_companies` — Company / account records](#hubspotcompanies-company-account-records)
   - [`hubspot_deals` — Deal pipeline records](#hubspotdeals-deal-pipeline-records)
   - [`hubspot_activities` — Calls, emails, meetings, tasks](#hubspotactivities-calls-emails-meetings-tasks)
+  - [`hubspot_associations` — Object relationship links](#hubspot_associations--object-relationship-links)
+  - [`hubspot_contact_ext` — Custom contact properties (key-value)](#hubspot_contact_ext--custom-contact-properties-key-value)
+  - [`hubspot_deal_ext` — Custom deal properties (key-value)](#hubspot_deal_ext--custom-deal-properties-key-value)
   - [`hubspot_owners` — HubSpot user directory (salespeople)](#hubspotowners-hubspot-user-directory-salespeople)
   - [`hubspot_collection_runs` — Connector execution log](#hubspotcollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
@@ -131,6 +134,36 @@ HubSpot stores relationships between objects (contacts↔companies, deals↔cont
 | `from_object_id` | String | Source object ID |
 | `to_object_type` | String | Target object type: `deal` / `contact` / `company` |
 | `to_object_id` | String | Target object ID |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+---
+
+### `hubspot_contact_ext` — Custom contact properties (key-value)
+
+HubSpot contacts support unlimited custom properties. Collected via the properties list on the contact response — any property not in the core `hubspot_contacts` schema is written here.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contact_id` | String | Parent contact ID — joins to `hubspot_contacts.contact_id` |
+| `field_id` | String | HubSpot property internal name (camelCase) |
+| `field_name` | String | HubSpot property label |
+| `field_value` | String | Property value as string |
+| `value_type` | String | Type hint: `string` / `number` / `enumeration` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+---
+
+### `hubspot_deal_ext` — Custom deal properties (key-value)
+
+HubSpot deals support custom properties per portal. Collected from any non-core deal property in the API response.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deal_id` | String | Parent deal ID — joins to `hubspot_deals.deal_id` |
+| `field_id` | String | HubSpot property internal name |
+| `field_name` | String | HubSpot property label |
+| `field_value` | String | Property value as string |
+| `value_type` | String | Type hint: `string` / `number` / `enumeration` / `date` / `json` |
 | `collected_at` | DateTime64(3) | Collection timestamp |
 
 ---

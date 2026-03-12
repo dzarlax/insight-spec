@@ -12,6 +12,7 @@ Standalone specification for the Zendesk (Support / Helpdesk) connector.
   - [`support_tickets` — Ticket metadata and current state](#supporttickets-ticket-metadata-and-current-state)
   - [`support_ticket_events` — Append-only audit log](#supportticketevents-append-only-audit-log)
   - [`support_agents` — Agent directory](#supportagents-agent-directory)
+  - [`zendesk_ticket_ext` — Custom ticket fields (key-value)](#zendesk_ticket_ext--custom-ticket-fields-key-value)
   - [`support_collection_runs` — Connector execution log](#supportcollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
 - [Silver / Gold Mappings](#silver-gold-mappings)
@@ -160,6 +161,24 @@ Identity anchor for support analytics. Maps to `person_id` via Identity Manager.
 **Note on `role`**: Zendesk has three agent-tier roles — `agent` (standard), `admin` (full access), `light_agent` (read-only with comment access). The `GET /api/v2/users?role=agent` endpoint returns all three tiers. Fetch admins separately with `?role=admin` if needed.
 
 **Note on `group_name`**: `default_group_id` references a Zendesk Group. Group names can be fetched via `GET /api/v2/groups` and joined at collection time to populate `group_name`.
+
+---
+
+### `zendesk_ticket_ext` — Custom ticket fields (key-value)
+
+Zendesk tickets support custom fields configured per account via `GET /api/v2/ticket_fields`. Each custom field value appears in `ticket.custom_fields[]` array in the ticket response. Non-standard fields not in the core `support_tickets` schema are written here.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `source_instance_id` | String | Connector instance identifier, e.g. `zendesk-acme` |
+| `ticket_id` | String | Parent ticket ID — joins to `support_tickets.ticket_id` |
+| `field_id` | String | Zendesk custom field ID (numeric, stored as string) |
+| `field_title` | String | Custom field display title (from `GET /api/v2/ticket_fields`) |
+| `field_value` | String | Field value as string |
+| `value_type` | String | Type hint: `string` / `number` / `enumeration` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: `GET /api/v2/ticket_fields` returns all custom field definitions for the account. The connector fetches field metadata at startup and maps `field_id` to `field_title` when writing rows.
 
 ---
 

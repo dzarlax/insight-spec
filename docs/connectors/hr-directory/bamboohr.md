@@ -12,6 +12,7 @@ Standalone specification for the BambooHR (HR) connector. Expands Source 10 in t
   - [`bamboohr_employees` — Employee records](#bamboohremployees-employee-records)
   - [`bamboohr_departments` — Department hierarchy](#bamboohrdepartments-department-hierarchy)
   - [`bamboohr_leave_requests` — Time off requests](#bamboohrleaverequests-time-off-requests)
+  - [`bamboohr_employee_ext` — Custom employee fields (key-value)](#bamboohr_employee_ext--custom-employee-fields-key-value)
   - [`bamboohr_collection_runs` — Connector execution log](#bamboohrcollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
 - [Silver / Gold Mappings](#silver-gold-mappings)
@@ -96,6 +97,25 @@ Enables hierarchical org traversal — a team can be nested under multiple layer
 | `created_at` | DateTime64(3) | When the request was submitted |
 
 `leave_type` values are freeform and client-configured — normalisation across BambooHR and Workday requires a mapping layer at Silver or Gold.
+
+---
+
+### `bamboohr_employee_ext` — Custom employee fields (key-value)
+
+BambooHR returns all custom fields in the main employee response if included in the fields list when calling `GET /api/gateway.php/{company}/v1/employees/{id}`. Custom fields have IDs like `customField1`, `customField2`, etc. Any field not in the core `bamboohr_employees` schema is written here.
+
+**Note**: Unlike most other connectors, there is no separate Bronze `_ext` table required — BambooHR exposes custom fields inline in the main employee response. This table captures those fields in the standard key-value pattern for consistency. `class_people.custom_str_attrs` and `class_people.custom_num_attrs` are populated directly from these values at Silver processing time.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `employee_id` | String | Parent employee ID — joins to `bamboohr_employees.employee_id` |
+| `field_id` | String | BambooHR custom field ID, e.g. `customField1`, `customField5` |
+| `field_name` | String | Custom field display name (from field metadata API) |
+| `field_value` | String | Field value as string |
+| `value_type` | String | Type hint: `string` / `number` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: `GET /api/gateway.php/{company}/v1/meta/fields` returns all available field IDs and their display names, including custom fields.
 
 ---
 

@@ -87,6 +87,8 @@ Current snapshot of each ticket. Updated on every collection run. Identifiers an
 | `satisfaction_score` | String | NULLABLE | CSAT rating: `good` / `bad`; NULL if not rated or not applicable |
 | `tags` | String | NULLABLE | Comma-separated tags / labels applied to the ticket |
 | `metadata` | String | REQUIRED | Full API response as JSON |
+| `custom_str_attrs` | Map(String, String) | DEFAULT {} | Workspace-specific string custom fields promoted from `zendesk_ticket_ext` / `jsm_ticket_ext` per Custom Attributes Configuration |
+| `custom_num_attrs` | Map(String, Float64) | DEFAULT {} | Workspace-specific numeric custom fields (e.g. urgency scores, SLA tier) |
 | `data_source` | String | DEFAULT '' | Source discriminator: `insight_zendesk` / `insight_jsm` |
 | `_version` | UInt64 | REQUIRED | Deduplication version (millisecond timestamp) |
 

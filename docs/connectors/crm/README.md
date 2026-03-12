@@ -114,6 +114,8 @@ Identity anchor for all CRM analytics. Maps to `person_id` via Identity Manager.
 | `lead_source` | String | NULLABLE | Lead origin (Salesforce only; NULL for HubSpot) |
 | `probability` | Float64 | NULLABLE | Win probability 0–100 (Salesforce only; NULL for HubSpot) |
 | `metadata` | String | REQUIRED | Full API response as JSON |
+| `custom_str_attrs` | Map(String, String) | DEFAULT {} | Workspace-specific string custom fields promoted from `hubspot_deal_ext` / `salesforce_opportunity_ext` per Custom Attributes Configuration |
+| `custom_num_attrs` | Map(String, Float64) | DEFAULT {} | Workspace-specific numeric custom fields promoted from `hubspot_deal_ext` / `salesforce_opportunity_ext` per Custom Attributes Configuration |
 | `created_at` | DateTime64(3) | REQUIRED | Deal creation |
 | `updated_at` | DateTime64(3) | REQUIRED | Last update — cursor for incremental sync |
 | `data_source` | String | DEFAULT '' | Source discriminator |
@@ -178,6 +180,8 @@ Reference data only — not resolved to `person_id`. Used to enrich deal and act
 | `account_id` | String | NULLABLE | Associated company — joins to `crm_accounts.account_id` |
 | `lifecycle_stage` | String | NULLABLE | HubSpot lifecycle stage; NULL for Salesforce (`lead_source` used instead) |
 | `metadata` | String | REQUIRED | Full API response as JSON |
+| `custom_str_attrs` | Map(String, String) | DEFAULT {} | Workspace-specific string custom fields promoted from `hubspot_contact_ext` / `salesforce_contact_ext` per Custom Attributes Configuration |
+| `custom_num_attrs` | Map(String, Float64) | DEFAULT {} | Workspace-specific numeric custom fields (e.g. scores, tiers) |
 | `created_at` | DateTime64(3) | REQUIRED | Record creation |
 | `updated_at` | DateTime64(3) | REQUIRED | Last update |
 | `data_source` | String | DEFAULT '' | Source discriminator |

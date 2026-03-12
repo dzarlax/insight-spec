@@ -13,6 +13,7 @@ Standalone specification for the Jira Service Management (ITSM / Service Desk) c
   - [`support_ticket_events` — Append-only audit log](#supportticketevents-append-only-audit-log)
   - [`support_agents` — Agent directory](#supportagents-agent-directory)
   - [`support_sla` — SLA policy status per ticket](#supportsla-sla-policy-status-per-ticket)
+  - [`jsm_ticket_ext` — Custom ticket fields (key-value)](#jsm_ticket_ext--custom-ticket-fields-key-value)
   - [`support_collection_runs` — Connector execution log](#supportcollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
 - [Silver / Gold Mappings](#silver-gold-mappings)
@@ -228,6 +229,24 @@ JSM-specific table. Captures SLA policy breach and compliance status per ticket 
 - `idx_support_sla_breached`: `(is_breached, data_source)`
 
 **Note on snapshot semantics**: the SLA API returns the current SLA status, not a history of SLA state transitions. SLA pause/resume events are inferred from `support_ticket_events` status transitions (e.g. `In Progress` → `Waiting for Customer` pauses the clock). `collected_at` enables trend analysis when SLA status is collected periodically (see OQ-JSM-2).
+
+---
+
+### `jsm_ticket_ext` — Custom ticket fields (key-value)
+
+JSM tickets inherit Jira's custom field mechanism — custom fields use the `customfield_*` naming pattern. Any `customfield_*` field in the issue response that is not part of the core `support_tickets` schema is written here.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `source_instance_id` | String | Connector instance identifier, e.g. `jsm-acme-prod` |
+| `ticket_id` | String | Parent ticket ID — joins to `support_tickets.ticket_id` |
+| `field_id` | String | Jira custom field ID, e.g. `customfield_10200` |
+| `field_name` | String | Custom field display name (from `GET /rest/api/3/field`) |
+| `field_value` | String | Field value as string; JSON for complex types |
+| `value_type` | String | Type hint: `string` / `number` / `user` / `enum` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: `GET /rest/api/3/field` returns all field definitions including custom fields. The connector fetches field metadata at startup and maps `customfield_*` IDs to display names when writing rows.
 
 ---
 

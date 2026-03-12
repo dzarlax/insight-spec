@@ -14,6 +14,8 @@ Standalone specification for the Salesforce (CRM) connector. Expands Source 17 i
   - [`salesforce_opportunities` — Deal pipeline records](#salesforceopportunities-deal-pipeline-records)
   - [`salesforce_activities` — Tasks and Events](#salesforceactivities-tasks-and-events)
   - [`salesforce_users` — User directory](#salesforceusers-user-directory)
+  - [`salesforce_opportunity_ext` — Custom opportunity fields (key-value)](#salesforce_opportunity_ext--custom-opportunity-fields-key-value)
+  - [`salesforce_contact_ext` — Custom contact fields (key-value)](#salesforce_contact_ext--custom-contact-fields-key-value)
   - [`salesforce_collection_runs` — Connector execution log](#salesforcecollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
 - [Silver / Gold Mappings](#silver-gold-mappings)
@@ -147,6 +149,40 @@ Salesforce stores Tasks and Events as separate objects. This table merges both w
 | `is_active` | Bool | Whether the user account is active |
 
 Identity anchor for all salesperson-owned Salesforce objects.
+
+---
+
+### `salesforce_opportunity_ext` — Custom opportunity fields (key-value)
+
+Salesforce supports custom fields (`__c` suffix) on Opportunity objects. Collected from any `customfield_*` or `*__c` field in the SOQL query response that is not part of the core `salesforce_opportunities` schema.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `opportunity_id` | String | Parent opportunity ID — joins to `salesforce_opportunities.opportunity_id` |
+| `field_api_name` | String | Salesforce API field name, e.g. `Customer_Segment__c` |
+| `field_label` | String | Salesforce field label (display name) |
+| `field_value` | String | Field value as string |
+| `value_type` | String | Type hint: `string` / `number` / `enumeration` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: custom field metadata available via `GET /services/data/v{version}/sobjects/Opportunity/describe` — returns all field definitions including custom fields. Only fields with non-null values are written as rows.
+
+---
+
+### `salesforce_contact_ext` — Custom contact fields (key-value)
+
+Same pattern for Contact custom fields (`__c` suffix). Collected from any `*__c` field in the SOQL Contact query response that is not part of the core `salesforce_contacts` schema.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contact_id` | String | Parent contact ID — joins to `salesforce_contacts.contact_id` |
+| `field_api_name` | String | Salesforce API field name, e.g. `Customer_Tier__c` |
+| `field_label` | String | Salesforce field label (display name) |
+| `field_value` | String | Field value as string |
+| `value_type` | String | Type hint: `string` / `number` / `enumeration` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: `GET /services/data/v{version}/sobjects/Contact/describe` — returns all field definitions including custom fields.
 
 ---
 

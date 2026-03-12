@@ -85,6 +85,8 @@ Minimal record — identifiers and immutable context fields only. All mutable st
 | `created_at` | DateTime64(3) | REQUIRED | Issue creation timestamp |
 | `updated_at` | DateTime64(3) | REQUIRED | Last update — cursor for incremental sync |
 | `metadata` | String | REQUIRED | Full API response as JSON |
+| `custom_str_attrs` | Map(String, String) | DEFAULT {} | Workspace-specific string custom fields promoted from `task_tracker_issue_ext` per Custom Attributes Configuration |
+| `custom_num_attrs` | Map(String, Float64) | DEFAULT {} | Workspace-specific numeric custom fields promoted from `task_tracker_issue_ext` per Custom Attributes Configuration |
 | `data_source` | String | DEFAULT '' | Source discriminator: `insight_youtrack` / `insight_jira` |
 | `_version` | UInt64 | REQUIRED | Deduplication version (millisecond timestamp) |
 

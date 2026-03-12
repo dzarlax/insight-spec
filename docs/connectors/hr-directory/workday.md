@@ -12,6 +12,7 @@ Standalone specification for the Workday (HR) connector. Expands Source 11 in th
   - [`workday_workers` — Worker records (point-in-time)](#workdayworkers-worker-records-point-in-time)
   - [`workday_organizations` — Org units (departments, supervisory orgs, cost centers)](#workdayorganizations-org-units-departments-supervisory-orgs-cost-centers)
   - [`workday_leave` — Leave of absence and time off](#workdayleave-leave-of-absence-and-time-off)
+  - [`workday_worker_ext` — Custom worker fields (key-value)](#workday_worker_ext--custom-worker-fields-key-value)
   - [`workday_collection_runs` — Connector execution log](#workdaycollectionruns-connector-execution-log)
 - [Identity Resolution](#identity-resolution)
 - [Silver / Gold Mappings](#silver-gold-mappings)
@@ -114,6 +115,25 @@ Org units are also effective-dated — a department rename or restructure produc
 | `created_at` | DateTime64(3) | When the request was submitted |
 
 `leave_category` is Workday-specific (high-level), while `leave_type` is policy-defined and client-specific.
+
+---
+
+### `workday_worker_ext` — Custom worker fields (key-value)
+
+Workday workers support custom integration fields via custom reports (RaaS — Reports-as-a-Service) or integration system fields. Any field not in the core `workday_workers` schema — including custom integration attributes and calculated fields from custom reports — is written here.
+
+**Note**: Like BambooHR, Workday exposes custom fields inline in the worker response (or via a custom RaaS report that includes extra columns). This table captures those fields in the standard key-value pattern. `class_people.custom_str_attrs` and `class_people.custom_num_attrs` are populated from these values at Silver processing time.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `employee_id` | String | Parent worker ID — joins to `workday_workers.worker_id` |
+| `field_id` | String | Workday field or report column ID, e.g. `Custom_Attribute_1` |
+| `field_name` | String | Field display name (from RaaS report column header or field metadata) |
+| `field_value` | String | Field value as string |
+| `value_type` | String | Type hint: `string` / `number` / `date` / `json` |
+| `collected_at` | DateTime64(3) | Collection timestamp |
+
+**Discovery**: custom fields are defined in the Workday RaaS report configuration or Integration System configuration. The connector administrator must declare which custom report columns to collect via the connector configuration.
 
 ---
 
