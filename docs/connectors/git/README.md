@@ -723,7 +723,7 @@ WHERE ext.property_key = 'hotfix_flag'
 **Resolution process**:
 1. Extract email from `git_commits.author_email` and `git_pull_requests_reviewers.reviewer_email`
 2. Normalize email (lowercase, trim whitespace)
-3. Map to canonical `person_id` via Identity Manager in Gold step 2
+3. Map to canonical `person_id` via Identity Manager in Silver step 2
 4. If email absent/masked, attempt resolution by `author_name` or `author_uuid` with source context
 5. Create new `person_id` if no match found
 
