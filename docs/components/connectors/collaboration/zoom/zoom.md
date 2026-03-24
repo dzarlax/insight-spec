@@ -40,6 +40,8 @@ Standalone specification for the Zoom (Collaboration) connector. This document a
 
 **Required OAuth scopes**: must cover `GET /users`, `GET /metrics/meetings`, `GET /metrics/meetings/{meeting_uuid}/participants`, and `GET /chat/users/{zoom_user_id}/messages` for the connector's implemented collection paths.
 
+**Pagination**: `users`, `meetings`, `participants`, and `message_activities` all use Zoom `next_page_token` pagination where the endpoint supports it. The meeting-related streams request `page_size` explicitly in the current manifest.
+
 **Field naming**: snake_case — Zoom API returns mixed naming styles; fields are normalised to snake_case at Bronze level.
 
 **Why multiple tables**: Zoom exposes distinct synchronous and asynchronous activity shapes. `zoom_meetings` stores authoritative meeting instances, `zoom_meeting_participants` stores participant-level attendance evidence needed for duration metrics, `zoom_message_activity` stores mandatory async activity using the implemented separate user-scoped path, `zoom_users` provides lightweight attribution support, and `zoom_collection_runs` records observability state.

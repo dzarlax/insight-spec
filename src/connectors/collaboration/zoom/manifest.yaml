@@ -140,9 +140,20 @@ definitions:
           http_method: GET
           error_handler:
             $ref: "#/definitions/base_error_handler"
-          request_parameters: {}
+          request_parameters:
+            page_size: "{{ config['page_size'] }}"
         paginator:
-          type: NoPagination
+          type: DefaultPaginator
+          page_token_option:
+            type: RequestOption
+            inject_into: request_parameter
+            field_name: next_page_token
+          pagination_strategy:
+            type: CursorPagination
+            cursor_value: "{{ response.get('next_page_token') }}"
+          stop_condition:
+            type: StopCondition
+            condition: "{{ not response.get('next_page_token') }}"
         record_selector:
           type: RecordSelector
           extractor:
@@ -232,9 +243,20 @@ definitions:
                     action: SUCCESS
                     http_codes:
                       - 404
-          request_parameters: {}
+          request_parameters:
+            page_size: "{{ config['page_size'] }}"
         paginator:
-          type: NoPagination
+          type: DefaultPaginator
+          page_token_option:
+            type: RequestOption
+            inject_into: request_parameter
+            field_name: next_page_token
+          pagination_strategy:
+            type: CursorPagination
+            cursor_value: "{{ response.get('next_page_token') }}"
+          stop_condition:
+            type: StopCondition
+            condition: "{{ not response.get('next_page_token') }}"
         record_selector:
           type: RecordSelector
           extractor:

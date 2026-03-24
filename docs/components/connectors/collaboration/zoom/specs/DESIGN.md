@@ -725,8 +725,8 @@ This keeps ongoing incremental collection mandatory without blocking the pipelin
 
 The current implementation uses the following Zoom API contract:
 - `GET /users` for user directory support and message-flow partitioning
-- `GET /metrics/meetings` for meeting discovery
-- `GET /metrics/meetings/{meeting_uuid}/participants` for meeting-scoped participant attendance evidence, with encoded meeting UUID and tolerant handling for source-side `404` gaps
+- `GET /metrics/meetings` for meeting discovery, using `page_size` and `next_page_token` pagination
+- `GET /metrics/meetings/{meeting_uuid}/participants` for meeting-scoped participant attendance evidence, with encoded meeting UUID, tolerant handling for source-side `404` gaps, and `page_size` plus `next_page_token` pagination
 - `GET /chat/users/{zoom_user_id}/messages` for separate user-scoped message activity collection
 
 The declarative source manifest names the corresponding source streams `users`, `meetings`, `participants`, and `message_activities`. These stream names are implementation identifiers only; Bronze persistence remains `zoom_users`, `zoom_meetings`, `zoom_meeting_participants`, and `zoom_message_activity`.
