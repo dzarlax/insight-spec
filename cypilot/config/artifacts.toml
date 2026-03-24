@@ -102,10 +102,6 @@ kind = "DESIGN"
 path = "docs/components/connectors/hr-directory/README.md"
 name = "HR Silver Layer"
 
-[[systems.artifacts]]
-kind = "DESIGN"
-path = "docs/components/connectors/hr-directory/bamboohr.md"
-name = "BambooHR Connector Specification"
 
 [[systems.artifacts]]
 kind = "PRD"
