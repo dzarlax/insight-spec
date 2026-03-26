@@ -224,7 +224,7 @@ The connector exposes no public API. Its implementation contract is the declarat
 | `GET /users` | `users` stream |
 | `GET /metrics/meetings` | `meetings` stream |
 | `GET /metrics/meetings/{meeting_uuid}/participants` | `participants` stream |
-| `GET /chat/users/{zoom_user_id}/messages` | `message_activities` stream |
+| `GET /chat/users/{zoom_user_id}/messages` | `message_activities` stream; records extracted from the top-level `messages` array |
 
 ### 3.6 Interactions & Sequences
 
@@ -299,7 +299,6 @@ The current manifest emits four logical source entities. The table names below a
 | `actual_end_at` | DateTime | Actual end when present |
 | `duration_seconds` | Int | Duration when present/derivable in payload |
 | `discovered_at` | DateTime | Discovery timestamp when present |
-| `enrichment_status` | String | Currently set to `pending` by manifest |
 | `limitation_code` | String | Limitation marker when present |
 | `source_endpoint` | String | Source endpoint when present |
 | `_airbyte_data_source` | String | Always `insight_zoom` |
@@ -429,6 +428,7 @@ The manifest does not currently define `_version` markers or a run table.
 Implemented retry behavior comes from `base_error_handler`:
 - `429` and `503` use `Retry-After`
 - `500`, `502`, `504` retry with exponential backoff
+- `participants` extends this behavior with `404 => SUCCESS` to tolerate missing participant payloads for individual meetings without disabling transient-error retries
 
 `meetings` additionally uses a 7-day lookback window in its incremental cursor configuration.
 

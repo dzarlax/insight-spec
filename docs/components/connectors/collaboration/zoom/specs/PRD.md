@@ -393,7 +393,7 @@ None.
 - Any meeting-linked message activity exposed by the source is preserved; otherwise message activity is collected through the separate user-scoped flow
 
 **Alternative Flows**:
-- **Participant detail unavailable**: If Zoom does not provide participant detail for a discovered meeting, the connector records the limitation and marks the meeting as partially enriched rather than silently complete
+- **Participant detail unavailable**: If Zoom does not provide participant detail for a discovered meeting, the connector records the limitation in Bronze and through surrounding run observability rather than silently treating the meeting as fully evidenced
 - **API failure during enrichment**: If enrichment fails for a subset of meetings, the run records the failure and leaves those meetings eligible for retry in a follow-up cycle
 
 ### UC-002 Collect Zoom Message Activity

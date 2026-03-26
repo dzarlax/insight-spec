@@ -41,6 +41,45 @@ definitions:
         backoff_strategies:
           - type: ExponentialBackoffStrategy
             factor: 5
+  participants_error_handler:
+    type: CompositeErrorHandler
+    error_handlers:
+      - type: DefaultErrorHandler
+        response_filters:
+          - type: HttpResponseFilter
+            action: SUCCESS
+            http_codes:
+              - 404
+      - type: DefaultErrorHandler
+        response_filters:
+          - type: HttpResponseFilter
+            action: RATE_LIMITED
+            http_codes:
+              - 429
+        backoff_strategies:
+          - type: WaitTimeFromHeader
+            header: Retry-After
+      - type: DefaultErrorHandler
+        response_filters:
+          - type: HttpResponseFilter
+            action: RATE_LIMITED
+            http_codes:
+              - 503
+        backoff_strategies:
+          - type: WaitTimeFromHeader
+            header: Retry-After
+      - type: DefaultErrorHandler
+        max_retries: 5
+        response_filters:
+          - type: HttpResponseFilter
+            action: RETRY
+            http_codes:
+              - 500
+              - 502
+              - 504
+        backoff_strategies:
+          - type: ExponentialBackoffStrategy
+            factor: 5
   base_requester:
     type: HttpRequester
     url_base: https://api.zoom.us/v2/
@@ -238,10 +277,6 @@ definitions:
                 else ('zoom:series-window:' ~ record.get('id') ~ ':' ~
                 (record.get('start_time') or record.get('scheduled_start_time') or
                 record.get('date')))) }}
-            - type: AddedFieldDefinition
-              path:
-                - enrichment_status
-              value: pending
         - type: AddFields
           fields:
             - type: AddedFieldDefinition
@@ -274,14 +309,7 @@ definitions:
             '%2F') | replace('+', '%2B') | replace('=', '%3D') }}/participants
           http_method: GET
           error_handler:
-            type: CompositeErrorHandler
-            error_handlers:
-              - type: DefaultErrorHandler
-                response_filters:
-                  - type: HttpResponseFilter
-                    action: SUCCESS
-                    http_codes:
-                      - 404
+            $ref: "#/definitions/participants_error_handler"
           request_parameters:
             type: past
             page_size: "{{ config['page_size'] }}"
@@ -411,7 +439,8 @@ definitions:
           type: RecordSelector
           extractor:
             type: DpathExtractor
-            field_path: []
+            field_path:
+              - messages
       primary_key:
         - message_activity_id
       schema_loader:
@@ -646,10 +675,6 @@ schemas:
           - string
           - "null"
         format: date-time
-      enrichment_status:
-        type:
-          - string
-          - "null"
       limitation_code:
         type:
           - string

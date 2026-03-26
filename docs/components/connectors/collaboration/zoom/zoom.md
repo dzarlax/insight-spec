@@ -134,7 +134,6 @@ The current manifest requires these configuration properties:
 - `meeting_uuid`
 - `identity_strength`
 - `meeting_instance_key`
-- `enrichment_status = pending`
 - `_airbyte_data_source`
 - `_airbyte_collected_at`
 
@@ -153,7 +152,6 @@ The current manifest requires these configuration properties:
 - `actual_end_at`
 - `duration_seconds`
 - `discovered_at`
-- `enrichment_status`
 - `limitation_code`
 - `source_endpoint`
 - `_airbyte_data_source`
@@ -230,6 +228,9 @@ The current manifest requires these configuration properties:
 **Pagination**:
 - `next_page_token`
 
+**Response record path**:
+- top-level `messages` array
+
 **Primary key**:
 - `message_activity_id`
 
@@ -275,6 +276,7 @@ All streams share:
 - `url_base = https://api.zoom.us/v2/`
 - `Accept: application/json`
 - common retry handling for `429`, `503`, `500`, `502`, `504`
+- `participants` additionally treats `404` as success to tolerate source-side gaps while preserving the shared retry rules
 
 ## Incremental Behavior
 
