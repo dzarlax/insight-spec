@@ -216,26 +216,17 @@ The connector **MUST** extract daily aggregated usage data from the `POST /teams
 
 - [ ] `p2` - **ID**: `cpt-insightspec-fr-cursor-collection-runs`
 
-The connector **MUST** produce a collection run log entry for each execution, recording: run ID, start/end time, status, per-stream record counts, API call count, and error count.
-
-**Rationale**: Operational visibility into connector health. Enables alerting on failed runs and tracking data completeness over time.
-
-**Actors**: `cpt-insightspec-actor-cursor-operator`
-
-#### Dual-Schedule Sync for Usage Events
+#### Capture Retroactive Cost Adjustments
 
 - [ ] `p1` - **ID**: `cpt-insightspec-fr-cursor-dual-sync`
 
-The connector **MUST** implement a dual-schedule sync pattern for usage events via two streams and two Airbyte connections:
+The connector **MUST** ensure that usage event cost fields reflect the latest values from the Cursor API, accounting for retroactive adjustments that may occur within the current billing period.
 
-1. **`cursor_usage_events`** (hourly) — incremental from last cursor position. Provides near-real-time visibility into AI usage.
-2. **`cursor_usage_events_daily_resync`** (daily, after 12:08:04 UTC) — re-fetches the previous day's events. Captures retroactive cost adjustments to `requestsCosts`, `totalCents`, `cursorTokenFee`.
+**Rationale**: Cursor may retroactively adjust cost fields for events within the billing period. The connector must have a mechanism to capture these adjustments so that downstream cost reporting remains accurate.
 
-Both streams hit the same API endpoint (`POST /teams/filtered-usage-events`) and share the same schema. They write to separate Bronze tables. The Silver dbt model applies the following deduplication rule:
-- **Yesterday and earlier**: data taken from `cursor_usage_events_daily_resync` (authoritative, finalized costs)
-- **Today**: data taken from `cursor_usage_events` (near-real-time, costs may change)
+**Implementation note**: See DESIGN.md for the dual-schedule sync pattern (hourly incremental + daily resync).
 
-**Rationale**: Cursor may retroactively adjust cost fields for events within the current day. The existing production system implements this pattern with hourly sync + daily resync at 03:00 UTC. The 12:08:04 UTC boundary aligns with the Cursor billing cycle daily cutoff.
+**Actors**: `cpt-insightspec-actor-cursor-operator`
 
 **Actors**: `cpt-insightspec-actor-cursor-operator`
 
