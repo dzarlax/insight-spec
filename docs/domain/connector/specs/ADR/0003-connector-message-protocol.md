@@ -55,7 +55,7 @@ The question: should we adopt the Airbyte protocol specification as-is, define a
 1. **Airbyte Protocol v2 (adopt as-is)** — use the full Airbyte protocol specification with all 8 message types (RECORD, STATE, LOG, SPEC, CATALOG, CONNECTION_STATUS, TRACE, CONTROL)
 2. **Singer TAP Protocol** — use the Singer specification with 3 message types (SCHEMA, RECORD, STATE)
 3. **Custom Protocol (Insight-native)** — define a platform-specific protocol with message types tailored to the orchestrator's existing message model
-4. **Airbyte-Compatible Subset** — adopt Airbyte's core message types (RECORD, STATE, LOG, CATALOG) with Insight-specific extensions, keeping compatibility with Airbyte connectors
+4. **Airbyte-Compatible Subset** — adopt Airbyte-compatible core message types (RECORD, STATE, LOG, CATALOG, SPEC, CONNECTION_STATUS) with Insight-specific extensions, keeping compatibility with Airbyte connectors
 
 ## Decision Outcome
 
