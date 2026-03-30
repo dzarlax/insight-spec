@@ -134,13 +134,13 @@ Emitted once at startup (in response to `--discover` flag). Declares all availab
 Emitted once (in response to `--spec` flag). Declares the connector's configuration requirements.
 
 ```json
-{"type": "SPEC", "spec": {"protocol_version": "0.3.0", "connectionSpecification": {"type": "object", "required": ["base_url", "instance_name", "auth_type", "credentials"], "properties": {"base_url": {"type": "string", "description": "Bitbucket Server URL"}, "instance_name": {"type": "string", "description": "Unique connector instance identifier"}}}}}
+{"type": "SPEC", "spec": {"protocol_version": "1.0.0", "connectionSpecification": {"type": "object", "required": ["base_url", "instance_name", "auth_type", "credentials"], "properties": {"base_url": {"type": "string", "description": "Bitbucket Server URL"}, "instance_name": {"type": "string", "description": "Unique connector instance identifier"}}}}}
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | yes | Always `"SPEC"` |
-| `spec.protocol_version` | string | yes | Protocol version (e.g., `"0.3.0"`) |
+| `spec.protocol_version` | string | yes | Insight protocol version (e.g., `"1.0.0"`) |
 | `spec.connectionSpecification` | object | yes | JSON Schema for connector configuration |
 
 #### CONNECTION_STATUS — Connectivity validation
@@ -270,10 +270,13 @@ Adopt Airbyte's core message types (RECORD, STATE, LOG, CATALOG, SPEC, CONNECTIO
 
 ### Protocol Version Strategy
 
-The protocol starts at version `0.3.0` (matching Airbyte Protocol v2). Future versions:
-- `0.3.x` — backwards-compatible additions (new optional fields)
-- `0.4.0` — potential breaking changes (field renames, removed message types)
-- `1.0.0` — stable, production-grade protocol with full test coverage
+**Airbyte Protocol reference version**: The current Airbyte protocol is at `0.18.0`. This ADR adopts a **subset** of Airbyte's message types — we do not implement the full `0.18.0` specification (which includes features like resumable full refresh, file transfer, and concurrent streams that are not needed at this stage). The subset we adopt is stable across Airbyte versions `0.3.0` through `0.18.0` — the core message types (RECORD, STATE, LOG, CATALOG, SPEC, CONNECTION_STATUS) have not changed structurally.
+
+**Insight protocol version**: The Insight connector protocol starts at version `1.0.0`. It is versioned independently from Airbyte. The version reflects the Insight protocol maturity, not the Airbyte version it was derived from.
+
+Future versions:
+- `1.0.x` — backwards-compatible additions (new optional fields, new extension message types)
+- `2.0.0` — breaking changes (field renames, removed message types, structural changes)
 
 ### Adapter Pattern for Third-Party Connectors
 
