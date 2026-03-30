@@ -16,7 +16,7 @@ decision-makers: antonz
 - [Decision Outcome](#decision-outcome)
   - [Core Message Types (from Airbyte Protocol)](#core-message-types-from-airbyte-protocol)
   - [Insight-Specific Extensions](#insight-specific-extensions)
-  - [Connector CLI](#connector-cli-interface)
+  - [Connector CLI](#connector-cli)
   - [Consequences](#consequences)
   - [Confirmation](#confirmation)
 - [Pros and Cons of the Options](#pros-and-cons-of-the-options)
