@@ -175,6 +175,16 @@ name = "Slack Connector Specification"
 
 [[systems.artifacts]]
 kind = "PRD"
+path = "docs/components/connectors/collaboration/slack/specs/PRD.md"
+name = "Slack Connector PRD"
+
+[[systems.artifacts]]
+kind = "DESIGN"
+path = "docs/components/connectors/collaboration/slack/specs/DESIGN.md"
+name = "Slack Connector Design"
+
+[[systems.artifacts]]
+kind = "PRD"
 path = "docs/components/connectors/collaboration/zoom/specs/PRD.md"
 name = "Zoom Connector PRD"
 
