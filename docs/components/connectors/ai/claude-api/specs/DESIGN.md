@@ -76,7 +76,7 @@ graph LR
 | `cpt-insightspec-fr-claude-api-workspaces` | `claude_api_workspaces` stream with offset-based pagination, full refresh |
 | `cpt-insightspec-fr-claude-api-invites` | `claude_api_invites` stream with offset-based pagination, full refresh |
 | `cpt-insightspec-fr-claude-api-collection-runs` | `claude_api_collection_runs` monitoring stream (framework-managed) |
-| `cpt-insightspec-fr-claude-api-framework-fields` | `AddFields` transformation injects `tenant_id`, `source_instance_id`, `data_source`, `collected_at`, `_version` |
+| `cpt-insightspec-fr-claude-api-framework-fields` | `AddFields` transformation injects `tenant_id`, `insight_source_id`, `data_source`, `collected_at`, `_version` |
 | `cpt-insightspec-fr-claude-api-usage-unique-key` | `AddFields` generates composite `unique` key from dimensional columns |
 | `cpt-insightspec-fr-claude-api-cost-unique-key` | `AddFields` generates composite `unique` key from `(date, workspace_id, description)` |
 
@@ -319,7 +319,7 @@ SQL transformation that maps `claude_api_messages_usage` Bronze data to the `cla
 |-------|------|----------|-------------|
 | `tenant_id` | string | Yes | Tenant isolation identifier (UUID) |
 | `admin_api_key` | string (secret) | Yes | Anthropic Admin API key |
-| `source_instance_id` | string | No | Source instance discriminator (default: empty) |
+| `insight_source_id` | string | No | Source instance discriminator (default: empty) |
 | `start_date` | string | No | Earliest date to collect (ISO 8601, default: 90 days ago) |
 
 ### 3.4 Internal Dependencies
@@ -476,7 +476,7 @@ sequenceDiagram
 | Column | Type | Description |
 |--------|------|-------------|
 | `tenant_id` | String | Tenant isolation identifier (UUID) -- framework-injected |
-| `source_instance_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
+| `insight_source_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
 | `unique` | String | Composite key: `{date}\|{workspace_id}\|{description}` |
 | `date` | String | Cost date (ISO 8601 date) |
 | `workspace_id` | String | Workspace identifier |
@@ -507,7 +507,7 @@ sequenceDiagram
 | Column | Type | Description |
 |--------|------|-------------|
 | `tenant_id` | String | Tenant isolation identifier (UUID) -- framework-injected |
-| `source_instance_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
+| `insight_source_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
 | `id` | String | API key identifier |
 | `name` | String | API key name |
 | `status` | String | Key status (e.g., `active`, `disabled`) |
@@ -531,7 +531,7 @@ sequenceDiagram
 | Column | Type | Description |
 |--------|------|-------------|
 | `tenant_id` | String | Tenant isolation identifier (UUID) -- framework-injected |
-| `source_instance_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
+| `insight_source_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
 | `id` | String | Workspace identifier |
 | `name` | String | Workspace name |
 | `display_name` | String | Workspace display name |
@@ -554,7 +554,7 @@ sequenceDiagram
 | Column | Type | Description |
 |--------|------|-------------|
 | `tenant_id` | String | Tenant isolation identifier (UUID) -- framework-injected |
-| `source_instance_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
+| `insight_source_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
 | `id` | String | Invite identifier |
 | `email` | String | Invitee email address |
 | `role` | String | Organization role assigned |
@@ -578,7 +578,7 @@ sequenceDiagram
 | Column | Type | Description |
 |--------|------|-------------|
 | `tenant_id` | String | Tenant isolation identifier (UUID) -- framework-injected |
-| `source_instance_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
+| `insight_source_id` | String | Source instance discriminator -- framework-injected, DEFAULT '' |
 | `run_id` | String | Unique run identifier |
 | `started_at` | String | Run start time (ISO 8601) |
 | `completed_at` | String | Run end time (ISO 8601) |

@@ -8,6 +8,15 @@ models:
         description: "Tenant isolation field"
         tests:
           - not_null
+      - name: source_id
+        description: "Source instance identifier"
+        tests:
+          - not_null
+      - name: unique_key
+        description: "Composite deduplication key"
+        tests:
+          - not_null
+          - unique
 
   - name: class_crm_users
     description: "Unified CRM users from all sources (Salesforce, HubSpot)"

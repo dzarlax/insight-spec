@@ -89,6 +89,10 @@ definitions:
             value: "{{ config['tenant_id'] }}"
           - path: [source_instance_id]
             value: "{{ config['source_instance_id'] }}"
+          - path: [_source]
+            value: "bamboohr"
+          - path: [_extracted_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%SZ') }}"
     schema_loader:
       type: InlineSchemaLoader
       schema:
@@ -217,6 +221,10 @@ definitions:
             value: "{{ config['tenant_id'] }}"
           - path: [source_instance_id]
             value: "{{ config['source_instance_id'] }}"
+          - path: [_source]
+            value: "bamboohr"
+          - path: [_extracted_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%SZ') }}"
     schema_loader:
       type: InlineSchemaLoader
       schema:
@@ -338,6 +346,10 @@ definitions:
             value: "{{ config['tenant_id'] }}"
           - path: [source_instance_id]
             value: "{{ config['source_instance_id'] }}"
+          - path: [_source]
+            value: "bamboohr"
+          - path: [_extracted_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%SZ') }}"
     schema_loader:
       type: InlineSchemaLoader
       schema:

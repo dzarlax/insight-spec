@@ -22,8 +22,8 @@ definitions:
     fields:
       - path: [tenant_id]
         value: "{{ config['tenant_id'] }}"
-      - path: [source_instance_id]
-        value: "{{ config.get('source_instance_id', '') }}"
+      - path: [insight_source_id]
+        value: "{{ config.get('insight_source_id', '') }}"
       - path: [collected_at]
         value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%SZ') }}"
       - path: [data_source]
@@ -79,7 +79,7 @@ streams:
         properties:
           tenant_id:
             type: string
-          source_instance_id:
+          insight_source_id:
             type: string
           id:
             type: string
@@ -148,7 +148,7 @@ streams:
         properties:
           tenant_id:
             type: string
-          source_instance_id:
+          insight_source_id:
             type: string
           unique:
             type: string
@@ -284,7 +284,7 @@ streams:
         properties:
           tenant_id:
             type: string
-          source_instance_id:
+          insight_source_id:
             type: string
           id:
             type: string
@@ -349,7 +349,7 @@ streams:
         properties:
           tenant_id:
             type: string
-          source_instance_id:
+          insight_source_id:
             type: string
           unique:
             type: string
@@ -450,7 +450,7 @@ streams:
         properties:
           tenant_id:
             type: string
-          source_instance_id:
+          insight_source_id:
             type: string
           id:
             type: string
@@ -518,7 +518,7 @@ spec:
         description: Anthropic Admin API key for Team/Enterprise workspace
         airbyte_secret: true
         order: 1
-      source_instance_id:
+      insight_source_id:
         type: string
         title: Source Instance ID
         description: Optional connector instance identifier for multi-instance deployments

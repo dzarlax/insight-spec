@@ -162,7 +162,7 @@ Salesforce customers heavily customize their schemas with custom fields (`__c` s
 - Identity resolution via `email` from user directory
 - OAuth 2.0 Client Credentials Flow authentication
 - All timestamps normalized to UTC
-- `source_instance_id`, `tenant_id`, and `data_source = 'insight_salesforce'` stamped on every record
+- `insight_source_id`, `tenant_id`, and `data_source = 'insight_salesforce'` stamped on every record
 - Sandbox vs. production org detection during connection configuration
 
 ### 4.2 Out of Scope
@@ -316,9 +316,13 @@ Collection run metadata (run ID, start/end time, status, per-stream record count
 
 Each stream **MUST** define a primary key that ensures re-running the connector for an overlapping date range does not produce duplicate records.
 
-The connector **MUST** generate a surrogate URN-based primary key for entity records in the format `urn:salesforce:{tenant_id}:{source_instance_id}:{record_id}`. The original `source_instance_id`, `tenant_id`, and Salesforce 18-char ID fields **MUST** be preserved as separate columns for filtering and joins.
+The connector **MUST** generate a surrogate URN-based primary key for entity records in the format `urn:salesforce:{tenant_id}:{source_instance_id}:{record_id}`. The original `source_instance_id`, `tenant_id`, and Salesforce 18-char ID fields **MUST** be preserved as separate columns for filtering and joins. The URN key eliminates the need for composite key joins in downstream analytics.
 
-**Rationale**: URN-based surrogate keys provide unambiguous cross-org identity while keeping component fields available for filtering.
+Custom field ext streams use `(source_instance_id, entity_id, field_api_name)` as the composite key.
+
+The Airbyte sync mode for all entity streams (contacts, accounts, opportunities, activities, opportunity history) **MUST** be **Incremental | Append + Deduped** (upsert/merge semantics). The `salesforce_users` stream **MUST** use **Full Refresh | Append** with SCD Type 2 handling (see `cpt-insightspec-fr-sf-user-scd`). The `salesforce_deleted_records` stream **MUST** use **Incremental | Append**.
+
+**Rationale**: Without explicit upsert semantics, overlapping incremental windows produce duplicate rows. URN-based surrogate keys provide unambiguous cross-org identity while keeping component fields available for filtering, matching the pattern established by the Jira connector (`urn:jira:{tenant_id}:{source_instance_id}:{issue_key}`).
 
 **Actors**: `cpt-insightspec-actor-sf-api`
 
@@ -386,9 +390,9 @@ The Identity Manager (Silver step 2) resolves identity as follows:
 
 - [ ] `p1` - **ID**: `cpt-insightspec-fr-sf-instance-context`
 
-Every record emitted by the connector **MUST** include `source_instance_id` (identifying the specific Salesforce org), `tenant_id` (identifying the Insight tenant), and `data_source` (set to `insight_salesforce` for all records). These fields are required for multi-instance disambiguation, tenant isolation, and source identification when Salesforce data merges with HubSpot data in unified `class_crm_*` Silver tables.
+Every record emitted by the connector **MUST** include `insight_source_id` (identifying the specific Salesforce org), `tenant_id` (identifying the Insight tenant), and `data_source` (set to `insight_salesforce` for all records). These fields are required for multi-instance disambiguation, tenant isolation, and source identification when Salesforce data merges with HubSpot data in unified `class_crm_*` Silver tables.
 
-**Rationale**: Multiple Salesforce orgs (production, sandbox, acquired companies) may feed into the same Bronze store. Without `source_instance_id`, Salesforce 18-char IDs could collide across orgs. The `data_source` field enables the Silver pipeline to distinguish Salesforce-originated records from HubSpot-originated records in the unified CRM schema, matching the pattern established by the Slack connector (`data_source = 'insight_slack'`).
+**Rationale**: Multiple Salesforce orgs (production, sandbox, acquired companies) may feed into the same Bronze store. Without `insight_source_id`, Salesforce 18-char IDs could collide across orgs. The `data_source` field enables the Silver pipeline to distinguish Salesforce-originated records from HubSpot-originated records in the unified CRM schema, matching the pattern established by the Slack connector (`data_source = 'insight_slack'`).
 
 **Actors**: `cpt-insightspec-actor-sf-operator`
 
@@ -512,7 +516,7 @@ Tasks and Events are separate streams, merged at Silver. All entity streams incl
 1. Operator provides `instance_url`, `client_id`, `client_secret`, `tenant_id`, and `source_instance_id`
 2. System validates credentials against the Salesforce API
 3. System discovers the org type (production vs. sandbox) from the instance URL
-6. If sandbox detected: system displays a warning that sandbox data may duplicate production records and labels the connection as `sandbox` in `source_instance_id` metadata
+4. If sandbox detected: system displays a warning that sandbox data may duplicate production records and labels the connection as `sandbox` in `source_instance_id` metadata
 7. System queries the Describe API for each target object and validates Field-Level Security (FLS) coverage — reports any schema-defined fields that are not visible to the authenticated user
 8. System presents available objects and custom field metadata
 9. Operator confirms object scope (default: all standard objects + all `__c` fields on Opportunity and Contact)
@@ -569,15 +573,15 @@ Tasks and Events are separate streams, merged at Silver. All entity streams incl
 
 ## 9. Acceptance Criteria
 
-- [ ] Contacts, accounts, and opportunities extracted from a live Salesforce org with core fields
-- [ ] Opportunity stage history (`StageName`, `Amount`) extracted
-- [ ] Tasks and Events extracted as separate Bronze streams with independent cursors
-- [ ] User directory extracted with email, title, department, and active status
+- [ ] Contacts, accounts, and opportunities extracted from a live Salesforce org with core fields including `record_type_id` and `currency_iso_code` (opportunities)
+- [ ] Opportunity stage history (`StageName`, `Amount`) extracted from `OpportunityFieldHistory`
+- [ ] Tasks and Events extracted as separate Bronze streams (`salesforce_tasks`, `salesforce_events`) with independent cursors; `who_type` and `what_type` polymorphic discriminators populated on both
+- [ ] User directory extracted with email, title, department, profile, and active status; SCD Type 2 preserves historical state
 - [ ] Custom fields (`__c`) captured alongside standard fields on all entity streams
-- [ ] Incremental sync on second run extracts only newly modified records
-- [ ] Owner ID references User records in all user-attributed streams
-- [ ] URN-based surrogate primary key on all streams
-- [ ] `source_instance_id`, `tenant_id`, and `data_source` present in all records
+- [ ] Incremental sync on second run extracts only newly modified records (no full reload)
+- [ ] `owner_id` joins to `salesforce_users.user_id` in all user-attributed records
+- [ ] URN-based surrogate primary keys (`urn:salesforce:{tenant_id}:{source_instance_id}:{record_id}`) on all entity streams
+- [ ] `source_instance_id`, `tenant_id`, and `data_source = 'insight_salesforce'` present in all records
 - [ ] All timestamps stored in UTC
 - [ ] Source-native field names preserved in all Bronze tables
 - [ ] Soft-deleted records captured with deletion flag, no separate stream
