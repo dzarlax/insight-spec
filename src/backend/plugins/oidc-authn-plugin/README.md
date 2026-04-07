@@ -78,7 +78,7 @@ export APP__modules__oidc-authn-plugin__config__audience=api://insight
 
 1. Create an API in Auth0 Dashboard
 2. Issuer URI: `https://{tenant}.auth0.com/`
-3. JWKS URL: `{issuer}.well-known/jwks.json` — set `jwks_url` explicitly
+3. JWKS URL: `{issuer}/.well-known/jwks.json` — set `jwks_url` explicitly
 4. Audience: the API identifier
 
 ## Limitations
@@ -91,7 +91,7 @@ export APP__modules__oidc-authn-plugin__config__audience=api://insight
 
 This plugin implements the `AuthNResolverPluginClient` trait from `authn-resolver-sdk`. It is discovered by the `authn-resolver` gateway module via the GTS types-registry at runtime.
 
-```
+```text
 Request with Bearer token
     → API Gateway extracts token
     → authn-resolver delegates to this plugin

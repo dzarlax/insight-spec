@@ -47,6 +47,10 @@ gateway:
     inFlight: 32
 
 # Health probes
+# Provided by cyberfabric api-gateway module:
+#   GET /health  → {"status":"healthy","timestamp":"..."} (public, no auth)
+#   GET /healthz → "ok" (public, no auth)
+# No separate /ready endpoint — gateway is stateless, healthy = ready.
 livenessProbe:
   httpGet:
     path: /health
@@ -56,7 +60,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /ready
+    path: /health
     port: http
   initialDelaySeconds: 5
   periodSeconds: 5

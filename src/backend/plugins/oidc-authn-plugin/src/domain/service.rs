@@ -37,6 +37,7 @@ pub struct OidcService {
     validation_config: ValidationConfig,
     issuer_url: String,
     tenant_claim: String,
+    require_tenant_claim: bool,
     subject_type: String,
 }
 
@@ -69,6 +70,7 @@ impl OidcService {
             validation_config,
             issuer_url: config.issuer_url.clone(),
             tenant_claim: config.tenant_claim.clone(),
+            require_tenant_claim: config.require_tenant_claim,
             subject_type: config.subject_type.clone(),
         }
     }
@@ -110,11 +112,39 @@ impl OidcService {
         let subject_id = uuid_from_issuer_sub(&self.issuer_url, sub_str);
 
         // 4. Extract tenant_id from configured claim
-        let subject_tenant_id = claims
+        let subject_tenant_id = match claims
             .get(&self.tenant_claim)
             .and_then(serde_json::Value::as_str)
-            .and_then(|s| Uuid::parse_str(s).ok())
-            .unwrap_or_default();
+        {
+            Some(s) if Uuid::parse_str(s).is_ok() => {
+                // Safe: just checked is_ok
+                Uuid::parse_str(s).unwrap_or_default()
+            }
+            Some(s) => {
+                tracing::warn!(
+                    claim = %self.tenant_claim,
+                    value = %s,
+                    "tenant claim is not a valid UUID"
+                );
+                if self.require_tenant_claim {
+                    return Err(OidcError::InvalidClaimFormat {
+                        field: self.tenant_claim.clone(),
+                        reason: format!("not a valid UUID: {s}"),
+                    });
+                }
+                Uuid::default()
+            }
+            None => {
+                tracing::warn!(
+                    claim = %self.tenant_claim,
+                    "tenant claim missing from JWT"
+                );
+                if self.require_tenant_claim {
+                    return Err(OidcError::MissingClaim(self.tenant_claim.clone()));
+                }
+                Uuid::default()
+            }
+        };
 
         // 5. Extract scopes from `scp` (Okta) or `scope` (standard) claim
         let token_scopes = extract_scopes(&claims);

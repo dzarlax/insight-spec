@@ -42,7 +42,7 @@ Configuration is loaded in layers (highest priority last):
 1. **Defaults** — hardcoded in code
 2. **YAML file** — `-c config/insight.yaml`
 3. **Environment variables** — `APP__modules__<module>__config__<key>`
-4. **CLI flags** — `--verbose`, `--port`
+4. **CLI flags** — `--verbose`, `--print-config`
 
 ### Key environment variables
 
@@ -111,7 +111,7 @@ helm install insight-gw ./helm --set authDisabled=true
 
 ## Architecture
 
-```
+```text
 Client → Ingress → API Gateway → [Auth Middleware] → Service Modules
                                        │
                                        ├── OIDC Plugin (JWT validation via JWKS)
@@ -132,6 +132,17 @@ The gateway is a cyberfabric-core ModKit server binary that links:
 | `module-orchestrator` | Module lifecycle management |
 | `types-registry` | GTS type/plugin discovery |
 
+## Health endpoints
+
+Provided by cyberfabric `api-gateway` module (public, no auth required):
+
+| Endpoint | Response | Purpose |
+|----------|----------|---------|
+| `GET /health` | `{"status":"healthy","timestamp":"..."}` | Liveness + readiness probe |
+| `GET /healthz` | `ok` | Simple liveness check |
+
+Both are registered as public routes — no JWT token needed. Used by Kubernetes liveness and readiness probes.
+
 ## Building
 
 ```bash
@@ -139,16 +150,11 @@ cd src/backend
 cargo build --release --bin insight-api-gateway
 ```
 
-Docker:
+Docker (build context is `cf/` parent directory containing both repos):
 
-```dockerfile
-FROM rust:1.92 AS builder
-WORKDIR /app
-COPY . .
-RUN cargo build --release --bin insight-api-gateway
-
-FROM debian:bookworm-slim
-COPY --from=builder /app/target/release/insight-api-gateway /usr/local/bin/
-COPY services/api-gateway/config/ /etc/insight/
-CMD ["insight-api-gateway", "run", "-c", "/etc/insight/insight.yaml"]
+```bash
+cd /path/to/cf
+docker build -f insight/src/backend/services/api-gateway/Dockerfile -t insight-api-gateway:dev .
 ```
+
+See `Dockerfile` for the full multi-stage build (protoc, non-root user, bookworm-slim runtime).

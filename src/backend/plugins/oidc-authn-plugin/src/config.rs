@@ -48,6 +48,11 @@ pub struct OidcAuthnPluginConfig {
     /// If the claim is missing, the subject's home tenant defaults to a nil UUID.
     pub tenant_claim: String,
 
+    /// If `true`, reject tokens that are missing the tenant claim or have
+    /// an unparseable tenant UUID. When `false` (default), a missing tenant
+    /// claim logs a warning and defaults to nil UUID.
+    pub require_tenant_claim: bool,
+
     /// Subject type passed to `SecurityContext` (e.g., "user", "service").
     pub subject_type: String,
 
@@ -65,6 +70,7 @@ impl Default for OidcAuthnPluginConfig {
             jwks_url: String::new(),
             jwks_refresh_interval_seconds: 300,
             tenant_claim: "tenant_id".to_owned(),
+            require_tenant_claim: false,
             subject_type: "user".to_owned(),
             leeway_seconds: 60,
         }

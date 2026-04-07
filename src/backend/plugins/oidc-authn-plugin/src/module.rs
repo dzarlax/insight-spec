@@ -51,6 +51,19 @@ impl Module for OidcAuthnPlugin {
             );
         }
 
+        if config.jwks_refresh_interval_seconds == 0 {
+            anyhow::bail!(
+                "oidc-authn-plugin: jwks_refresh_interval_seconds must be > 0"
+            );
+        }
+
+        if config.leeway_seconds < 0 {
+            anyhow::bail!(
+                "oidc-authn-plugin: leeway_seconds must be >= 0, got {}",
+                config.leeway_seconds
+            );
+        }
+
         info!(
             issuer = %config.issuer_url,
             audience = %config.audience,
@@ -74,18 +87,15 @@ impl Module for OidcAuthnPlugin {
             ),
         }
 
-        // Create service
+        // Create service (not stored in OnceLock yet — registration may fail)
         let service = Arc::new(OidcService::new(&config, key_provider));
-        self.service
-            .set(service.clone())
-            .map_err(|_| anyhow::anyhow!("{} module already initialized", Self::MODULE_NAME))?;
 
         // Generate plugin instance ID
         let instance_id = AuthNResolverPluginSpecV1::gts_make_instance_id(
             "insight.core.oidc_authn_resolver.plugin.v1",
         );
 
-        // Register plugin instance in types-registry
+        // Register plugin instance in types-registry (fallible — do before OnceLock)
         let registry = ctx.client_hub().get::<dyn TypesRegistryClient>()?;
         let instance = BaseModkitPluginV1::<AuthNResolverPluginSpecV1> {
             id: instance_id.clone(),
@@ -96,6 +106,11 @@ impl Module for OidcAuthnPlugin {
         let instance_json = serde_json::to_value(&instance)?;
         let results = registry.register(vec![instance_json]).await?;
         RegisterResult::ensure_all_ok(&results)?;
+
+        // Registration succeeded — now commit to OnceLock (irreversible)
+        self.service
+            .set(service.clone())
+            .map_err(|_| anyhow::anyhow!("{} module already initialized", Self::MODULE_NAME))?;
 
         // Register scoped client in ClientHub
         let api: Arc<dyn AuthNResolverPluginClient> =
