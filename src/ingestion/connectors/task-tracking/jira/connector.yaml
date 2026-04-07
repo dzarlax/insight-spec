@@ -67,7 +67,7 @@ definitions:
     pagination_strategy:
       type: CursorPagination
       cursor_value: "{{ response.get('nextPageToken', '') }}"
-      stop_condition: "{{ response.get('isLast', true) }}"
+      stop_condition: "{{ not response.get('nextPageToken') }}"
 
   agile_paginator:
     type: DefaultPaginator
@@ -320,6 +320,8 @@ streams:
             value: "{{ record.get('displayName') }}"
           - path: [account_type]
             value: "{{ record.get('accountType') }}"
+          - path: [active]
+            value: "{{ record.get('active') }}"
     schema_loader:
       type: InlineSchemaLoader
       schema:
@@ -480,6 +482,10 @@ streams:
             value: "{{ stream_partition.id_readable }}"
           - path: [author_account_id]
             value: "{{ record.get('author', {}).get('accountId') }}"
+          - path: [created]
+            value: "{{ record.get('created') }}"
+          - path: [updated]
+            value: "{{ record.get('updated') }}"
           - path: [body]
             value: "{{ record.get('body', {}) | tojson }}"
     schema_loader:
@@ -524,6 +530,8 @@ streams:
             value: "{{ stream_partition.id_readable }}"
           - path: [author_account_id]
             value: "{{ record.get('author', {}).get('accountId') }}"
+          - path: [started]
+            value: "{{ record.get('started') }}"
           - path: [time_spent_seconds]
             value: "{{ record.get('timeSpentSeconds') }}"
           - path: [comment]
@@ -641,6 +649,8 @@ spec:
         title: Page Size
         description: "Page size for JQL search (default 50, max 100)"
         default: 50
+        minimum: 1
+        maximum: 100
         order: 7
     additionalProperties: true
 

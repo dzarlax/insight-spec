@@ -549,7 +549,7 @@ All Bronze table schemas are defined in [`jira.md`](../jira.md). The schemas are
 | Table | PK (natural) | Cursor / Sync Strategy |
 |-------|-------------|------------------------|
 | `jira_issue` | `(tenant_id, source_instance_id, id_readable)` | `updated` — incremental via JQL |
-| `jira_issue_history` | `(tenant_id, source_instance_id, id_readable, changelog_id, field_id)` | Child of `jira_issue` — scoped by parent issue set. `issue_jira_id` removed from Bronze (resolve via JOIN with `jira_issue` on `id_readable`) |
+| `jira_issue_history` | `(tenant_id, source_instance_id, changelog_id)` | Child of `jira_issue` — one record per changelog entry; `items` stored as JSON array. `field_id` is inside `items` (not a top-level Bronze column). `issue_jira_id` resolved via JOIN on `id_readable` |
 | `jira_worklogs` | `(tenant_id, source_instance_id, worklog_id)` | Child of `jira_issue` — per-issue fetch via SubstreamPartitionRouter |
 | `jira_comments` | `(tenant_id, source_instance_id, comment_id)` | Child of `jira_issue` — per-issue fetch |
 | `jira_projects` | `(tenant_id, source_instance_id, project_id)` | Full refresh each run |
@@ -559,7 +559,7 @@ All Bronze table schemas are defined in [`jira.md`](../jira.md). The schemas are
 All tables use `ReplacingMergeTree(_version)` with `_version = toUnixTimestamp64Milli(now64())` for deduplication.
 
 > **Note**: `jira_issue_ext` and `jira_issue_links` Bronze tables from the original specification ([`jira.md`](../jira.md)) are not populated by the connector in Phase 1. All custom fields and issue links are stored in `custom_fields_json` on `jira_issue` (since `fields: "*all"` returns the full `fields` object including `issuelinks`) and denormalized to separate tables in Silver/dbt. Sync monitoring is handled by the Airbyte platform; `jira_collection_runs` is not implemented at the connector level.
-
+>
 > **Note on schema types**: All stream schemas use `{}` (any type) for property types instead of specific types (string, integer, etc.). This is intentional because Airbyte `AddFields` transformations may return values with varying types depending on the source data (e.g., a field could be string or number). ClickHouse handles typing at the destination level via column definitions.
 
 ---
@@ -585,7 +585,7 @@ All tables use `ReplacingMergeTree(_version)` with `_version = toUnixTimestamp64
 project IN ({project_keys}) AND updated >= "{last_cursor}" ORDER BY updated ASC
 ```
 
-The connector overlaps the cursor window by 1 minute to account for issues updated during the previous pagination run. Deduplication at the storage level (`ReplacingMergeTree`) handles the overlap.
+The connector overlaps the cursor window by 1 hour (`lookback_window: PT1H`) to account for issues updated during the previous sync run. Deduplication at the storage level (`ReplacingMergeTree`) handles the overlap.
 
 **Key Endpoints by Stream**:
 
