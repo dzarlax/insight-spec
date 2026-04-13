@@ -1,7 +1,7 @@
 # DESIGN — Confluence Connector
 
-> Version 1.1 — April 2026 (Updated based on live API testing against `darthvolt.atlassian.net`)
-> Based on: [PRD.md](./PRD.md), [`confluence.md`](../confluence.md), [Wiki Unified Schema](../../README.md), [Connector Framework DESIGN](../../../../domain/connector/specs/DESIGN.md), [Airbyte Connector DESIGN](../../../../domain/airbyte-connector/specs/DESIGN.md)
+> Version 1.2 — April 2026 (Aligned with upstream Connector Framework spec §4.1-§4.10)
+> Based on: [PRD.md](./PRD.md), [`confluence.md`](../confluence.md), [Wiki Unified Schema](../../README.md), [Connector Framework DESIGN](../../../../domain/connector/specs/DESIGN.md)
 
 <!-- toc -->
 
@@ -40,17 +40,19 @@
 
 ### 1.1 Architectural Vision
 
-The Confluence connector is an Airbyte declarative (nocode) YAML manifest that extracts space directory, page metadata, version history, and user identity data from the Atlassian Confluence REST API (Cloud) and writes all data to per-source Bronze tables in the shared analytical store (ClickHouse), following the unified `wiki_*` Bronze schema defined in [`confluence.md`](../confluence.md) and [`README.md`](../../README.md). The declarative approach is consistent with all other connectors in the project (m365, bamboohr, claude-api, jira).
+The Confluence connector is an Airbyte declarative (nocode) YAML manifest that extracts space directory, page metadata, and version history from the Atlassian Confluence REST API (Cloud) and writes all data to per-source Bronze tables in the shared analytical store (ClickHouse), following the unified `wiki_*` Bronze schema defined in [`confluence.md`](../confluence.md) and [`README.md`](../../README.md). The declarative approach is consistent with all other connectors in the project (m365, bamboohr, claude-api, jira).
 
-Phase 1 targets Confluence Cloud only. The connector uses REST API v2 for spaces, pages, and page versions, and REST API v1 for user lookup (no v2 equivalent exists for `/rest/api/user/bulk`). Server/Data Center support is deferred to a future iteration.
+Phase 1 targets Confluence Cloud only. The connector uses REST API v2 for spaces, pages, and page versions. Server/Data Center support is deferred to a future iteration.
 
-Email resolution from Atlassian `accountId` is deferred to the Silver/dbt layer in Phase 1. The connector emits `accountId` as `user_id` on all user-attributed fields; email is resolved downstream via JOIN with `wiki_users` (populated from Jira's `jira_user` table, which shares the same Atlassian `accountId` namespace). A dedicated `wiki_users` stream emits unique `accountId` values extracted from page and version responses as lightweight user records with `email = null` and `display_name = null`.
+Email resolution from Atlassian `accountId` is deferred to the Silver/dbt layer in Phase 1. The connector emits `accountId` as `author_id` / `last_editor_id` on all user-attributed fields; email is resolved downstream via JOIN with `jira_user` (which shares the same Atlassian `accountId` namespace).
+
+> **wiki_users stream NOT implemented in Phase 1.** Confluence v2 API has no batch user lookup or list-all-users endpoint suitable for declarative manifests. User identity resolution happens in Silver via JOIN with `jira_user` (shared Atlassian accountId namespace).
 
 Version history is stored as raw version records in `wiki_page_versions`. Expansion to per-user per-day edit activity rows (`wiki_page_activity`) is deferred to Silver/dbt. Analytics endpoints (per-user view data, Premium tier only) are deferred to Phase 2.
 
 Incremental collection uses `sort=-modified-date` with client-side cursor filtering (`is_client_side_incremental: true`) on the `wiki_pages` stream. The PRD's `lastModifiedAfter` parameter does NOT exist on the v2 `/pages` endpoint — this is an API correction documented in Section 4. Full-refresh streams (spaces, users) are collected on every run.
 
-Every emitted record includes `tenant_id` and `source_instance_id` for multi-tenant isolation and multi-instance disambiguation.
+Every emitted record includes `tenant_id`, `source_id`, and `unique_key` (pattern: `{tenant_id}-{source_id}-{natural_key}`) for multi-tenant isolation, multi-instance disambiguation, and global deduplication.
 
 ### 1.2 Architecture Drivers
 
@@ -68,7 +70,7 @@ Every emitted record includes `tenant_id` and `source_instance_id` for multi-ten
 | `cpt-insightspec-fr-conf-deduplication` | Upsert keyed on natural PKs per table; `ReplacingMergeTree(_version)` at storage level |
 | `cpt-insightspec-fr-conf-incremental-sync` | `DatetimeBasedCursor` on `updated_at` (mapped from `version.createdAt`) with `is_client_side_incremental: true`; pages sorted by `-modified-date` to enable early termination |
 | `cpt-insightspec-fr-conf-identity-key` | Cloud-only — always `accountId` as `user_id`; extracted via DPath from `authorId` and `version.authorId` fields |
-| `cpt-insightspec-fr-conf-instance-context` | `AddFields` transformation injects `source_instance_id`, `tenant_id`, and `data_source` on every record |
+| `cpt-insightspec-fr-conf-instance-context` | `AddFields` transformation injects `tenant_id`, `source_id`, `unique_key`, and `data_source` on every record |
 | `cpt-insightspec-fr-conf-utc-timestamps` | Confluence API returns ISO 8601 timestamps; stored as-is in Bronze |
 | `cpt-insightspec-fr-conf-collection-runs` | Sync monitoring handled by Airbyte platform sync logs; `confluence_collection_runs` table not implemented at connector level in Phase 1 |
 
@@ -83,7 +85,7 @@ Every emitted record includes `tenant_id` and `source_instance_id` for multi-ten
 
 ```text
 +---------------------------------------------------------------------------+
-|  Orchestrator / Scheduler (Kestra / Airbyte)                              |
+|  Orchestrator / Scheduler (Argo Workflows / Airbyte)                              |
 |  (triggers Confluence connector sync)                                     |
 +-------------------------------------+-------------------------------------+
                                       |
@@ -92,21 +94,20 @@ Every emitted record includes `tenant_id` and `source_instance_id` for multi-ten
 |  +-- wiki_spaces stream (full refresh, GET /wiki/api/v2/spaces)           |
 |  +-- wiki_pages stream (incremental, GET /wiki/api/v2/pages)              |
 |  |   +-- wiki_page_versions substream (per-page /versions)                |
-|  +-- wiki_users stream (full refresh, derived from page/version authors)  |
 +-------------------------------------+-------------------------------------+
                                       | Airbyte Protocol (RECORD, STATE, LOG)
 +-------------------------------------v-------------------------------------+
 |  Bronze Tables (ClickHouse - ReplacingMergeTree)                          |
-|  wiki_spaces, wiki_pages, wiki_page_versions, wiki_users                  |
+|  wiki_spaces, wiki_pages, wiki_page_versions                              |
 |  (all with data_source = 'insight_confluence')                            |
 +---------------------------------------------------------------------------+
 ```
 
 | Layer | Responsibility | Technology |
 |-------|---------------|------------|
-| Orchestration | Trigger, schedule, state management | Kestra / Airbyte platform |
+| Orchestration | Trigger, schedule, state management | Argo Workflows / Airbyte platform |
 | Collection | REST pagination, cursor management, retry | Airbyte DeclarativeSource (YAML manifest) |
-| Transformation | `AddFields` for `tenant_id`, `source_instance_id`, `data_source` injection; DPath extraction | Declarative transformations |
+| Transformation | `AddFields` for `tenant_id`, `source_id`, `unique_key`, `data_source` injection; DPath extraction | Declarative transformations |
 | Storage | Upsert to Bronze tables | ClickHouse `ReplacingMergeTree(_version)` |
 
 ---
@@ -125,7 +126,7 @@ The Confluence connector writes exclusively to `wiki_*` Bronze tables via the de
 
 - [ ] `p1` - **ID**: `cpt-insightspec-principle-conf-incremental`
 
-The `wiki_pages` stream is incremental by default. The `updated_at` timestamp (mapped from `version.createdAt`) from the last successful run serves as the client-side cursor via `DatetimeBasedCursor` with `is_client_side_incremental: true`. Pages are sorted by `-modified-date` so the connector reads the most recently modified pages first. Full collection is the degenerate case of an incremental run with no prior cursor. The `wiki_page_versions` substream is scoped by the parent page set returned by the incremental query. Directory streams (`wiki_spaces`, `wiki_users`) are full-refresh on each run.
+The `wiki_pages` stream is incremental by default. The `updated_at` timestamp (mapped from `version.createdAt`) from the last successful run serves as the client-side cursor via `DatetimeBasedCursor` with `is_client_side_incremental: true`. Pages are sorted by `-modified-date` so the connector reads the most recently modified pages first. Full collection is the degenerate case of an incremental run with no prior cursor. The `wiki_page_versions` substream is scoped by the parent page set returned by the incremental query. The `wiki_spaces` directory stream is full-refresh on each run.
 
 #### Fault Tolerance Over Completeness
 
@@ -151,13 +152,13 @@ Consistent with project convention, the Confluence connector uses a nocode YAML 
 
 - [ ] `p1` - **ID**: `cpt-insightspec-constraint-conf-api-version`
 
-Phase 1 targets Confluence Cloud REST API v2 for spaces, pages, and page versions. REST API v1 is used only for the user bulk endpoint (`/wiki/rest/api/user/bulk`), which has no v2 equivalent. All v2 endpoints use cursor-based pagination via `_links.next` with a maximum of 250 results per page.
+Phase 1 targets Confluence Cloud REST API v2 for spaces, pages, and page versions. All v2 endpoints use cursor-based pagination via `_links.next` with a maximum of 250 results per page. REST API v1 user bulk endpoint (`/wiki/rest/api/user/bulk`) is deferred to Phase 2.
 
 #### Airbyte Declarative Manifest Compliance
 
 - [ ] `p1` - **ID**: `cpt-insightspec-constraint-conf-airbyte-cdk`
 
-The connector MUST be a valid Airbyte DeclarativeSource YAML manifest. It MUST emit valid Airbyte Protocol messages (RECORD, STATE, LOG). Every emitted record MUST include `tenant_id`.
+The connector MUST be a valid Airbyte DeclarativeSource YAML manifest. It MUST emit valid Airbyte Protocol messages (RECORD, STATE, LOG). Every emitted record MUST include `tenant_id`, `source_id`, and `unique_key` per Connector Framework §4.6.
 
 > **Manifest version**: `6.60.9` — pinned to match the `airbyte/source-declarative-manifest:latest` Docker image CDK version.
 
@@ -195,7 +196,6 @@ The v2 `/pages` endpoint does NOT support a `lastModifiedAfter` query parameter 
 | `ConfluenceSpace` | Space directory: `id`, `name`, `description`, `type`, `status`, `url` | `wiki_spaces` |
 | `ConfluencePage` | Page metadata: `id`, `spaceId`, `title`, `status`, `authorId`, `version`, `parentId` | `wiki_pages` |
 | `ConfluencePageVersion` | Version history entry: `number`, `authorId`, `createdAt`, `message`, `minorEdit` | `wiki_page_versions` |
-| `ConfluenceUser` | User record derived from page/version `authorId` values: `accountId` only in Phase 1 | `wiki_users` |
 | `CollectionState` | Cursor state: `last_updated_at` timestamp | Airbyte platform sync state |
 
 These entities map to declarative stream schemas defined as JSON Schema files within the manifest package.
@@ -218,12 +218,12 @@ The single declarative YAML manifest (`connector.yaml`) defines all streams, aut
 
 ##### Responsibility scope
 
-- Defines all stream configurations: `wiki_spaces`, `wiki_pages`, `wiki_page_versions`, `wiki_users`.
+- Defines all stream configurations: `wiki_spaces`, `wiki_pages`, `wiki_page_versions`.
 - Configures `BasicHttpAuthenticator` with Basic Auth (`email:api_token` base64-encoded).
 - Configures `CursorPagination` for all v2 endpoints (cursor-based via `_links.next`).
 - Configures `DatetimeBasedCursor` on `updated_at` field (mapped from `version.createdAt`) for incremental sync with `is_client_side_incremental: true`.
 - Configures `SubstreamPartitionRouter` for `wiki_page_versions` (parent-child stream pattern per page).
-- Configures `AddFields` transformations for `tenant_id`, `source_instance_id`, and `data_source` injection on every record.
+- Configures `AddFields` transformations for `tenant_id`, `source_id`, `unique_key`, and `data_source` injection on every record.
 - Defines the connection specification (config schema) in the `spec` section.
 
 ##### Responsibility boundaries
@@ -276,7 +276,7 @@ Translates Confluence API response objects to Bronze schema fields using DPath e
 ##### Responsibility scope
 
 - DPath extractors map Confluence API JSON paths to Bronze schema field names (e.g., `version.createdAt` -> `updated_at`, `spaceId` -> `space_id`).
-- `AddFields` injects `tenant_id`, `source_instance_id`, and `data_source` on every record.
+- `AddFields` injects `tenant_id`, `source_id`, `unique_key`, and `data_source` on every record.
 - Status mapping: `current` -> `active` for spaces.
 
 ##### Responsibility boundaries
@@ -304,7 +304,7 @@ Extracts user identity attributes from Confluence Cloud API page and version obj
 - Extracts `authorId` as `author_id` from page responses.
 - Extracts `version.authorId` as `last_editor_id` from page responses.
 - Extracts `authorId` from version history responses.
-- Emits unique `accountId` values as `wiki_users` records with `email = null` and `display_name = null`.
+- Does NOT emit `wiki_users` records in Phase 1 (no batch user lookup endpoint suitable for declarative manifests).
 
 ##### Responsibility boundaries
 
@@ -332,14 +332,13 @@ Extracts user identity attributes from Confluence Cloud API page and version obj
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `instance_url` | str | Confluence Cloud instance URL (e.g., `https://myorg.atlassian.net`) |
-| `email` | str | User email for API token authentication |
-| `api_token` | str (airbyte_secret) | Atlassian API token |
-| `tenant_id` | str | Insight tenant identifier — injected into every record |
-| `source_instance_id` | str | Instance discriminator (e.g., `confluence-acme`) |
-| `space_keys` | str | Comma-separated space keys to sync (empty = all spaces) |
-| `start_date` | str | Earliest date for incremental sync, `YYYY-MM-DD` (default `2020-01-01`) |
-| `page_size` | int | Page size for API requests (default 100, max 250) |
+| `confluence_instance_url` | str | Confluence Cloud instance URL (e.g., `https://myorg.atlassian.net`) |
+| `confluence_email` | str | User email for API token authentication |
+| `confluence_api_token` | str (airbyte_secret) | Atlassian API token |
+| `insight_tenant_id` | str | Insight tenant identifier — injected into every record |
+| `insight_source_id` | str | Instance discriminator (e.g., `confluence-acme`) |
+| `confluence_start_date` | str | Earliest date for incremental sync, `YYYY-MM-DD` (default `2020-01-01`) |
+| `confluence_page_size` | int | Page size for API requests (default 100, max 250) |
 
 ---
 
@@ -348,7 +347,7 @@ Extracts user identity attributes from Confluence Cloud API page and version obj
 | Dependency Module | Interface Used | Purpose |
 |-------------------|----------------|---------|
 | Airbyte declarative manifest runtime | `DeclarativeSource`, stream definitions, `AirbyteMessage` | Connector framework |
-| `descriptor.yaml` | Declarative stream/table metadata | Package registration |
+| `descriptor.yaml` | Connector descriptor: `schedule`, `workflow`, `dbt_select`, `connection.namespace` | Package registration per Connector Framework §4.10 |
 
 **Dependency Rules**:
 - No circular dependencies between streams.
@@ -390,7 +389,7 @@ Extracts user identity attributes from Confluence Cloud API page and version obj
 |--------|-------|
 | Engine | `ReplacingMergeTree(_version)` |
 | Write pattern | Upsert keyed on natural primary keys per table |
-| Standard columns | `tenant_id`, `source_instance_id`, `data_source`, `_version` on all tables |
+| Standard columns | `tenant_id`, `source_id`, `unique_key`, `data_source`, `_version` on all tables |
 
 ---
 
@@ -418,7 +417,7 @@ sequenceDiagram
     loop Until _links.next absent
         API -->> Source: space batch
     end
-    Note over Source: AddFields: tenant_id, source_instance_id, data_source
+    Note over Source: AddFields: tenant_id, source_id, unique_key, data_source
     Source ->> Bronze: UPSERT wiki_spaces
 
     Note over Source: Page stream (incremental via client-side cursor)
@@ -426,7 +425,7 @@ sequenceDiagram
     loop Until _links.next absent or all pages older than cursor
         API -->> Source: page batch
         Note over Source: Client-side filter: version.createdAt >= cursor
-        Note over Source: AddFields: tenant_id, source_instance_id, data_source
+        Note over Source: AddFields: tenant_id, source_id, unique_key, data_source
         Source ->> Bronze: UPSERT wiki_pages
 
         Note over Source: Substream per page (SubstreamPartitionRouter)
@@ -437,14 +436,10 @@ sequenceDiagram
         Source ->> Bronze: INSERT wiki_page_versions
     end
 
-    Note over Source: User stream (full refresh, derived from pages/versions)
-    Note over Source: Unique accountId values emitted as user records
-    Source ->> Bronze: UPSERT wiki_users
-
     Source -->> Scheduler: STATE message (new cursor)
 ```
 
-**Description**: The incremental collection run fetches spaces as full refresh, then pages sorted by descending modification date with client-side cursor filtering. For each page in the incremental window, version history is fetched as a substream. Unique author IDs are collected and emitted as lightweight user records.
+**Description**: The incremental collection run fetches spaces as full refresh, then pages sorted by descending modification date with client-side cursor filtering. For each page in the incremental window, version history is fetched as a substream.
 
 ---
 
@@ -481,12 +476,11 @@ sequenceDiagram
 
 All Bronze table schemas are defined in [`confluence.md`](../confluence.md) and the unified wiki schema in [`README.md`](../../README.md). The schemas are authoritative — this section provides a summary reference and primary key definitions.
 
-| Table | PK (natural) | Cursor / Sync Strategy |
-|-------|-------------|------------------------|
-| `wiki_spaces` | `(tenant_id, source_instance_id, space_id)` | Full refresh each run |
-| `wiki_pages` | `(tenant_id, source_instance_id, page_id)` | `updated_at` (from `version.createdAt`) — incremental via client-side cursor |
-| `wiki_page_versions` | `(tenant_id, source_instance_id, page_id, version_number)` | Child of `wiki_pages` — scoped by parent page set |
-| `wiki_users` | `(tenant_id, source_instance_id, user_id)` | Full refresh each run |
+| Table | PK | `unique_key` pattern | Cursor / Sync Strategy |
+|-------|-----|----------------------|------------------------|
+| `wiki_spaces` | `[unique_key]` | `{tenant_id}-{source_id}-{space_id}` | Full refresh each run |
+| `wiki_pages` | `[unique_key]` | `{tenant_id}-{source_id}-{page_id}` | `updated_at` (from `version.createdAt`) — incremental via client-side cursor |
+| `wiki_page_versions` | `[unique_key]` | `{tenant_id}-{source_id}-{page_id}-{version_number}` | Child of `wiki_pages` — scoped by parent page set |
 
 All tables use `ReplacingMergeTree(_version)` with `_version = toUnixTimestamp64Milli(now64())` for deduplication.
 
@@ -572,7 +566,8 @@ The following corrections to the PRD assumptions were identified during API vali
 
 | Bronze Field | Confluence API Path | Notes |
 |-------------|---------------------|-------|
-| `source_instance_id` | config | Injected via `AddFields` from connector config |
+| `source_id` | config | Injected via `AddFields` from connector config |
+| `unique_key` | computed | `{tenant_id}-{source_id}-{space_id}` — injected via `AddFields` |
 | `space_id` | `id` | Confluence space ID |
 | `name` | `name` | Space display name |
 | `description` | `description.plain.value` | Plain text description |
@@ -588,7 +583,8 @@ The following corrections to the PRD assumptions were identified during API vali
 
 | Bronze Field | Confluence API Path | Notes |
 |-------------|---------------------|-------|
-| `source_instance_id` | config | Injected via `AddFields` |
+| `source_id` | config | Injected via `AddFields` |
+| `unique_key` | computed | `{tenant_id}-{source_id}-{page_id}` — injected via `AddFields` |
 | `page_id` | `id` | Confluence page ID |
 | `space_id` | `spaceId` | Parent space ID |
 | `title` | `title` | Page title |
@@ -615,7 +611,8 @@ The following corrections to the PRD assumptions were identified during API vali
 
 | Bronze Field | Confluence API Path | Notes |
 |-------------|---------------------|-------|
-| `source_instance_id` | config | Injected via `AddFields` |
+| `source_id` | config | Injected via `AddFields` |
+| `unique_key` | computed | `{tenant_id}-{source_id}-{page_id}-{version_number}` — injected via `AddFields` |
 | `page_id` | parent partition | From `SubstreamPartitionRouter` parent page `id` |
 | `version_number` | `number` | Version sequence number |
 | `author_id` | `authorId` | `accountId` of version author |
@@ -626,18 +623,7 @@ The following corrections to the PRD assumptions were identified during API vali
 | `data_source` | `insight_confluence` | Injected via `AddFields` |
 | `tenant_id` | config | Injected via `AddFields` |
 
-**User** -> `wiki_users`:
-
-| Bronze Field | Confluence API Path | Notes |
-|-------------|---------------------|-------|
-| `source_instance_id` | config | Injected via `AddFields` |
-| `user_id` | `authorId` (deduplicated) | Atlassian `accountId` collected from pages and versions |
-| `email` | NULL | Not populated in Phase 1 — resolved in Silver via JOIN with `jira_user` |
-| `display_name` | NULL | Not populated in Phase 1 — resolved in Silver |
-| `is_active` | 1 | Default active; actual status unknown without User API call |
-| `collected_at` | emission time | `now()` at record emission |
-| `data_source` | `insight_confluence` | Injected via `AddFields` |
-| `tenant_id` | config | Injected via `AddFields` |
+> **Note on `wiki_users`**: The `wiki_users` stream is NOT implemented in Phase 1. Confluence v2 API has no batch user lookup or list-all-users endpoint suitable for declarative manifests. User identity resolution happens in Silver via JOIN with `jira_user` (shared Atlassian accountId namespace).
 
 ---
 
@@ -647,11 +633,11 @@ The following corrections to the PRD assumptions were identified during API vali
 
 **Version History Collection**: Version history is fetched per-page via `SubstreamPartitionRouter` (`GET /wiki/api/v2/pages/{page_id}/versions`). This is an N+1 pattern (one API call chain per page in the incremental window). Raw version records are stored in `wiki_page_versions`. Expansion to `wiki_page_activity` (one row per edit per user per day) is deferred to Silver/dbt.
 
-**User Identity Collection**: The `wiki_users` stream in Phase 1 does NOT call a dedicated user API endpoint. Instead, unique `authorId` values are collected from `wiki_pages` and `wiki_page_versions` responses and emitted as lightweight user records with `user_id = accountId`, `email = null`, `display_name = null`. Full user enrichment happens in Silver via:
+**User Identity Resolution**: There is no `wiki_users` stream in Phase 1. Confluence v2 API has no batch user lookup or list-all-users endpoint suitable for declarative manifests. User identity resolution happens in Silver via:
 1. JOIN with `jira_user` table (same Atlassian `accountId` across Jira and Confluence)
 2. Future Phase 2: dedicated user resolution via `GET /wiki/rest/api/user/bulk`
 
-**Space Filtering**: When `space_keys` is configured, the `wiki_spaces` stream filters by the provided keys. The `wiki_pages` stream filters by `spaceId` for each space in scope. When `space_keys` is empty, all visible spaces are synced.
+**Space Filtering**: All visible spaces are synced. Space-level filtering via `confluence_space_keys` was removed from Phase 1 scope because the config field was declared but never referenced by any stream definition. Space filtering may be re-introduced in a future iteration if per-space page requests are implemented.
 
 **Concurrency**: The manifest uses default Airbyte concurrency settings. The `SubstreamPartitionRouter` for versions processes pages sequentially to avoid rate limit exhaustion.
 
@@ -677,7 +663,7 @@ wiki_pages.author_id (accountId)
       -> Identity Manager -> person_id
 ```
 
-Same chain applies to `wiki_pages.last_editor_id`, `wiki_page_versions.author_id`, and `wiki_users.user_id`.
+Same chain applies to `wiki_pages.last_editor_id` and `wiki_page_versions.author_id`.
 
 **Cross-platform identity**: `accountId` is shared across the Atlassian platform (Jira, Confluence, Bitbucket Cloud). Since the Jira connector already collects `jira_user` with email, the Silver layer can resolve Confluence user emails by joining on `accountId`. This avoids the need for a dedicated User API call in the Confluence connector Phase 1.
 
@@ -694,11 +680,15 @@ Same chain applies to `wiki_pages.last_editor_id`, `wiki_page_versions.author_id
 | Client-side incremental cursor | All pages fetched from API; filtered client-side against cursor | Efficient if Atlassian adds server-side `lastModifiedAfter` in future API versions |
 | No reconciliation mode | Permanently purged pages not detected by incremental sync | Periodic full-refresh reconciliation run (weekly) in a future iteration |
 | No `confluence_collection_runs` table | Sync monitoring via Airbyte platform only | Custom run tracking if needed beyond Airbyte platform capabilities |
-| `wiki_users` has no display_name or email | Lightweight records with `accountId` only | Phase 2: User API bulk resolution; Silver: JOIN with `jira_user` |
+| No `wiki_users` stream | wiki_users stream NOT implemented in Phase 1. Confluence v2 API has no batch user lookup or list-all-users endpoint suitable for declarative manifests. User identity resolution happens in Silver via JOIN with `jira_user` (shared Atlassian accountId namespace) | Phase 2: User API bulk resolution via `GET /wiki/rest/api/user/bulk`; Silver: JOIN with `jira_user` |
 | No blog post extraction | Blog posts (`GET /blogposts`) excluded from scope | Future v1.1 extension using same schema |
 | No page comments | Footer and inline comments excluded from scope | Future iteration via `GET /pages/{id}/footer-comments` |
-| No space filtering on pages endpoint | `space_keys` filtering requires fetching all pages then filtering client-side or issuing per-space requests | DESIGN should specify per-space requests when `space_keys` is configured |
+| No space filtering on pages endpoint | `confluence_space_keys` config field removed from Phase 1 -- declared but never referenced by any stream. All visible spaces are synced | Re-introduce in future iteration if per-space page requests are implemented |
 | URN-based surrogate key not implemented | Not generated at connector level | Deferred to Silver/dbt or future connector iteration |
+| `confluence_start_date` config deviation | `confluence_start_date` config field deviates from Connector Framework SS4.4 (which says start dates should be computed, not configured). This is intentional: Confluence v2 API has no `lastModifiedAfter` parameter, so client-side incremental filtering relies on a configurable start date for the initial sync. Subsequent runs use Airbyte STATE | N/A -- intentional deviation |
+| View analytics deferred (PRD SS5.2) | Per-user view analytics (`/analytics/content/{id}/viewers`) is Premium-only and requires per-page iteration under v1 API. Deferred to Phase 2 | Phase 2: analytics endpoints under v1 (`/wiki/rest/api/analytics/...`) |
+| User directory deferred (PRD SS5.3) | Email resolution from `accountId` via User API bulk endpoint not implemented. Connector emits `accountId` only | Silver: JOIN with `jira_user`; Phase 2: dedicated `/wiki/rest/api/user/bulk` resolution |
+| Collection runs deferred (PRD SS5.4) | `confluence_collection_runs` table not implemented at connector level. Sync monitoring handled by Airbyte platform sync logs | Custom run tracking if needed beyond Airbyte platform capabilities |
 
 ---
 
@@ -736,8 +726,7 @@ Confluence v2 API returns timestamps in ISO 8601 format (e.g., `2026-04-01T14:30
 - **PRD**: [PRD.md](./PRD.md)
 - **Bronze table schemas**: [`confluence.md`](../confluence.md)
 - **Unified wiki schema**: [`README.md`](../../README.md)
-- **Connector Framework**: [`docs/domain/connector/specs/DESIGN.md`](../../../../domain/connector/specs/DESIGN.md)
-- **Airbyte Connector Development**: [`docs/domain/airbyte-connector/specs/DESIGN.md`](../../../../domain/airbyte-connector/specs/DESIGN.md)
+- **Connector Framework**: [`docs/domain/connector/specs/DESIGN.md`](../../../../domain/connector/specs/DESIGN.md) — §4.1 (config naming), §4.6 (mandatory fields: `tenant_id`, `source_id`, `unique_key`), §4.10 (descriptor format)
 - **Wiki domain**: [`docs/components/connectors/wiki/`](../../)
 
 ---

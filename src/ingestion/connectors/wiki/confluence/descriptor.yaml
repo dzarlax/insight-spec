@@ -1,0 +1,9 @@
+name: confluence
+version: "1.0"
+
+schedule: "0 4 * * *"
+dbt_select: "tag:confluence+"
+workflow: sync
+
+connection:
+  namespace: bronze_confluence

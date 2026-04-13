@@ -1,0 +1,348 @@
+version: 6.60.9
+
+type: DeclarativeSource
+
+check:
+  type: CheckStream
+  stream_names:
+    - wiki_spaces
+
+definitions:
+  auth:
+    type: BasicHttpAuthenticator
+    username: "{{ config['confluence_email'] }}"
+    password: "{{ config['confluence_api_token'] }}"
+
+  base_requester:
+    type: HttpRequester
+    url_base: "{{ config['confluence_instance_url'] }}"
+    http_method: GET
+    authenticator:
+      $ref: "#/definitions/auth"
+    request_headers:
+      Accept: application/json
+
+  add_fields:
+    type: AddFields
+    fields:
+      - path: [tenant_id]
+        value: "{{ config['insight_tenant_id'] }}"
+      - path: [source_id]
+        value: "{{ config['insight_source_id'] }}"
+      - path: [data_source]
+        value: "insight_confluence"
+
+  confluence_paginator:
+    type: DefaultPaginator
+    page_token_option:
+      type: RequestPath
+    pagination_strategy:
+      type: CursorPagination
+      cursor_value: "{{ response.get('_links', {}).get('next', '') }}"
+      stop_condition: "{{ not response.get('_links', {}).get('next') }}"
+
+  wiki_spaces_schema:
+    type: object
+    $schema: http://json-schema.org/schema#
+    required:
+      - unique_key
+      - tenant_id
+      - source_id
+    properties:
+      unique_key: {}
+      tenant_id: {}
+      source_id: {}
+      data_source: {}
+      space_id: {}
+      name: {}
+      description: {}
+      space_type: {}
+      status: {}
+      url: {}
+      created_at: {}
+      collected_at: {}
+    additionalProperties: true
+
+  wiki_pages_schema:
+    type: object
+    $schema: http://json-schema.org/schema#
+    required:
+      - unique_key
+      - tenant_id
+      - source_id
+    properties:
+      unique_key: {}
+      tenant_id: {}
+      source_id: {}
+      data_source: {}
+      page_id: {}
+      space_id: {}
+      title: {}
+      status: {}
+      author_id: {}
+      last_editor_id: {}
+      created_at: {}
+      updated_at: {}
+      version_number: {}
+      parent_page_id: {}
+      collected_at: {}
+    additionalProperties: true
+
+  wiki_page_versions_schema:
+    type: object
+    $schema: http://json-schema.org/schema#
+    required:
+      - unique_key
+      - tenant_id
+      - source_id
+    properties:
+      unique_key: {}
+      tenant_id: {}
+      source_id: {}
+      data_source: {}
+      page_id: {}
+      version_number: {}
+      author_id: {}
+      created_at: {}
+      message: {}
+      minor_edit: {}
+      collected_at: {}
+    additionalProperties: true
+
+streams:
+  - type: DeclarativeStream
+    name: wiki_spaces
+    primary_key:
+      - unique_key
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $ref: "#/definitions/wiki_spaces_schema"
+    retriever:
+      type: SimpleRetriever
+      requester:
+        $ref: "#/definitions/base_requester"
+        path: /wiki/api/v2/spaces
+        request_parameters:
+          limit: "{{ config.get('confluence_page_size', 100) }}"
+      paginator:
+        $ref: "#/definitions/confluence_paginator"
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - results
+    transformations:
+      - $ref: "#/definitions/add_fields"
+      - type: AddFields
+        fields:
+          - path: [space_id]
+            value: "{{ record['id'] }}"
+          - path: [description]
+            value: >-
+              {{ (record.get('description', {}) or {}).get('plain', {}).get('value', '') }}
+          - path: [space_type]
+            value: "{{ record['type'] }}"
+          - path: [status]
+            value: >-
+              {{ 'active' if record.get('status') == 'current' else record.get('status', '') }}
+          - path: [url]
+            value: "{{ record.get('_links', {}).get('webui', '') }}"
+          - path: [created_at]
+            value: "{{ record.get('createdAt', '') }}"
+          - path: [collected_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%S.000Z') }}"
+          - path: [unique_key]
+            value: >-
+              {{ config['insight_tenant_id'] }}-{{ config['insight_source_id']
+              }}-{{ record['id'] }}
+
+  - type: DeclarativeStream
+    name: wiki_pages
+    primary_key:
+      - unique_key
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $ref: "#/definitions/wiki_pages_schema"
+    retriever:
+      type: SimpleRetriever
+      requester:
+        $ref: "#/definitions/base_requester"
+        path: /wiki/api/v2/pages
+        request_parameters:
+          status: current,archived,trashed
+          sort: -modified-date
+          limit: "{{ config.get('confluence_page_size', 100) }}"
+      paginator:
+        $ref: "#/definitions/confluence_paginator"
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - results
+    incremental_sync:
+      type: DatetimeBasedCursor
+      cursor_field: updated_at
+      is_client_side_incremental: true
+      cursor_datetime_formats:
+        - "%Y-%m-%dT%H:%M:%S.%fZ"
+        - "%Y-%m-%dT%H:%M:%S.%f%z"
+        - "%Y-%m-%d"
+      datetime_format: "%Y-%m-%dT%H:%M:%S.%fZ"
+      start_datetime:
+        type: MinMaxDatetime
+        datetime: "{{ config.get('confluence_start_date', '2020-01-01') }}"
+        datetime_format: "%Y-%m-%d"
+      end_datetime:
+        type: MinMaxDatetime
+        datetime: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%S.%fZ') }}"
+        datetime_format: "%Y-%m-%dT%H:%M:%S.%fZ"
+    transformations:
+      - $ref: "#/definitions/add_fields"
+      - type: AddFields
+        fields:
+          - path: [page_id]
+            value: "{{ record['id'] }}"
+          - path: [space_id]
+            value: "{{ record['spaceId'] }}"
+          - path: [author_id]
+            value: "{{ record.get('authorId', '') }}"
+          - path: [last_editor_id]
+            value: "{{ record.get('version', {}).get('authorId', '') }}"
+          - path: [created_at]
+            value: "{{ record.get('createdAt', '') }}"
+          - path: [updated_at]
+            value: "{{ record.get('version', {}).get('createdAt', '') }}"
+          - path: [version_number]
+            value: "{{ record.get('version', {}).get('number', '') }}"
+          - path: [parent_page_id]
+            value: "{{ record.get('parentId', '') }}"
+          - path: [collected_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%S.000Z') }}"
+          - path: [unique_key]
+            value: >-
+              {{ config['insight_tenant_id'] }}-{{ config['insight_source_id']
+              }}-{{ record['id'] }}
+
+  - type: DeclarativeStream
+    name: wiki_page_versions
+    primary_key:
+      - unique_key
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        $ref: "#/definitions/wiki_page_versions_schema"
+    retriever:
+      type: SimpleRetriever
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            parent_key: page_id
+            partition_field: page_id
+            stream:
+              $ref: "#/streams/1"
+      requester:
+        $ref: "#/definitions/base_requester"
+        path: /wiki/api/v2/pages/{{ stream_partition.page_id }}/versions
+        request_parameters:
+          limit: "{{ config.get('confluence_page_size', 100) }}"
+      paginator:
+        $ref: "#/definitions/confluence_paginator"
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - results
+    transformations:
+      - $ref: "#/definitions/add_fields"
+      - type: AddFields
+        fields:
+          - path: [page_id]
+            value: "{{ stream_partition.page_id }}"
+          - path: [version_number]
+            value: "{{ record.get('number', '') }}"
+          - path: [author_id]
+            value: "{{ record.get('authorId', '') }}"
+          - path: [created_at]
+            value: "{{ record.get('createdAt', '') }}"
+          - path: [message]
+            value: "{{ record.get('message', '') }}"
+          - path: [minor_edit]
+            value: "{{ record.get('minorEdit', false) }}"
+          - path: [collected_at]
+            value: "{{ now_utc().strftime('%Y-%m-%dT%H:%M:%S.000Z') }}"
+          - path: [unique_key]
+            value: >-
+              {{ config['insight_tenant_id'] }}-{{ config['insight_source_id']
+              }}-{{ stream_partition.page_id }}-{{ record['number'] }}
+
+concurrency_level:
+  type: ConcurrencyLevel
+  default_concurrency: 1
+
+spec:
+  type: Spec
+  connection_specification:
+    type: object
+    $schema: http://json-schema.org/draft-07/schema#
+    required:
+      - insight_tenant_id
+      - insight_source_id
+      - confluence_instance_url
+      - confluence_email
+      - confluence_api_token
+    properties:
+      insight_tenant_id:
+        type: string
+        description: Insight tenant identifier stamped onto every emitted record.
+        title: Insight Tenant ID
+        order: 0
+      insight_source_id:
+        type: string
+        description: >-
+          Instance discriminator for multi-instance support (e.g.
+          confluence-acme).
+        title: Insight Source ID
+        order: 1
+      confluence_instance_url:
+        type: string
+        description: >-
+          Confluence Cloud instance URL (e.g. https://myorg.atlassian.net). Do
+          not include a trailing slash.
+        title: Confluence Instance URL
+        order: 2
+      confluence_email:
+        type: string
+        description: Email address associated with the Atlassian API token.
+        title: Confluence Email
+        order: 3
+      confluence_api_token:
+        type: string
+        description: Atlassian API token generated at id.atlassian.com.
+        title: Confluence API Token
+        airbyte_secret: true
+        order: 4
+      confluence_start_date:
+        type: string
+        description: >-
+          Earliest date for incremental sync (YYYY-MM-DD). Defaults to
+          2020-01-01.
+        title: Start Date
+        format: date
+        default: "2020-01-01"
+        order: 5
+      confluence_page_size:
+        type: integer
+        description: >-
+          Number of results per API page (default 100, max 250).
+        title: Page Size
+        default: 100
+        minimum: 1
+        maximum: 250
+        order: 6
+    additionalProperties: true

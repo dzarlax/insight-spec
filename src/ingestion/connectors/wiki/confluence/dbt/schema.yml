@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: bronze_confluence
+    schema: bronze_confluence
+    tables:
+      - name: wiki_spaces
+      - name: wiki_pages
+      - name: wiki_page_versions
