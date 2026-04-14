@@ -52,6 +52,13 @@ gateway:
     burst: 50
     inFlight: 32
 
+# Reverse proxy routes to downstream services
+proxy:
+  routes:
+    - prefix: "/analytics"
+      upstream: "http://analytics-api-analytics-api:8081"
+      public: false
+
 # Health probes
 # Provided by cyberfabric api-gateway module:
 #   GET /health  → {"status":"healthy","timestamp":"..."} (public, no auth)

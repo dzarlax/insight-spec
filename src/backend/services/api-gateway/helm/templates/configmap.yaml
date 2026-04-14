@@ -5,10 +5,101 @@ metadata:
   labels:
     {{- include "insight-api-gateway.labels" . | nindent 4 }}
 data:
-  APP__modules__api-gateway__config__bind_addr: "0.0.0.0:{{ .Values.service.port }}"
-  APP__modules__api-gateway__config__auth_disabled: "{{ .Values.authDisabled }}"
-  APP__modules__api-gateway__config__prefix_path: "{{ .Values.gateway.prefixPath }}"
-  APP__modules__api-gateway__config__cors_enabled: "{{ .Values.gateway.corsEnabled }}"
-  APP__modules__api-gateway__config__enable_docs: "{{ .Values.gateway.enableDocs }}"
-  CLICKHOUSE_URL: "{{ .Values.clickhouse.url }}"
-  CLICKHOUSE_DATABASE: "{{ .Values.clickhouse.database }}"
+  gateway.yaml: |
+    server:
+      home_dir: "/app/data"
+
+    logging:
+      default:
+        console_level: info
+
+    modules:
+      api-gateway:
+        config:
+          bind_addr: "0.0.0.0:{{ .Values.service.port }}"
+          auth_disabled: {{ .Values.authDisabled }}
+          cors_enabled: {{ .Values.gateway.corsEnabled }}
+          prefix_path: {{ .Values.gateway.prefixPath | quote }}
+          enable_docs: {{ .Values.gateway.enableDocs }}
+          openapi:
+            title: "Insight API"
+            version: "0.1.0"
+            description: "Insight Platform API"
+          defaults:
+            body_limit_bytes: 16777216
+            rate_limit:
+              rps: {{ .Values.gateway.rateLimit.rps }}
+              burst: {{ .Values.gateway.rateLimit.burst }}
+              in_flight: {{ .Values.gateway.rateLimit.inFlight }}
+
+      module-orchestrator:
+        config: {}
+
+      grpc-hub:
+        config:
+          listen_addr: "uds:///tmp/insight-grpc"
+
+      authn-resolver:
+        config:
+          vendor: "hyperspot"
+
+      oidc-authn-plugin:
+        config:
+          vendor: "hyperspot"
+          priority: 50
+          {{- if not .Values.authDisabled }}
+          issuer_url: {{ .Values.oidc.issuerUrl | quote }}
+          audience: {{ .Values.oidc.audience | quote }}
+          {{- else }}
+          issuer_url: "https://disabled.example.com"
+          audience: "disabled"
+          {{- end }}
+          jwks_refresh_interval_seconds: 300
+          tenant_claim: "tenant_id"
+          subject_type: "user"
+          leeway_seconds: 60
+
+      auth-info:
+        config:
+          {{- if not .Values.authDisabled }}
+          issuer_url: {{ .Values.oidc.issuerUrl | quote }}
+          client_id: {{ .Values.oidc.clientId | quote }}
+          redirect_uri: {{ .Values.oidc.redirectUri | quote }}
+          {{- else }}
+          issuer_url: ""
+          client_id: ""
+          redirect_uri: ""
+          {{- end }}
+          scopes: [openid, profile, email]
+
+      authz-resolver:
+        config:
+          vendor: "hyperspot"
+
+      static-authz-plugin:
+        config:
+          vendor: "hyperspot"
+          priority: 100
+
+      tenant-resolver:
+        config:
+          vendor: "hyperspot"
+
+      single-tenant-tr-plugin:
+        config:
+          vendor: "hyperspot"
+          priority: 20
+          tenants:
+            - id: "00000000-df51-5b42-9538-d2b56b7ee953"
+              name: "default"
+              parent_id: null
+              status: active
+
+      proxy:
+        config:
+          routes:
+            {{- range .Values.proxy.routes }}
+            - prefix: {{ .prefix | quote }}
+              upstream: {{ .upstream | quote }}
+              public: {{ .public | default false }}
+            {{- end }}

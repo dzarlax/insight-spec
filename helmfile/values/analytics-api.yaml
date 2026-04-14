@@ -1,0 +1,19 @@
+##
+## Analytics API — local development overrides
+##
+## Base values: src/backend/services/analytics-api/helm/values.yaml
+##
+
+replicaCount: 1
+
+# Identity Resolution is not deployed yet — stub URL
+identityResolution:
+  url: "http://localhost:9999"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

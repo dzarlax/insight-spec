@@ -70,12 +70,12 @@ redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 clap = { version = "4.5", features = ["derive"] }
 
 # cyberfabric-core (crates.io)
-modkit = { package = "cf-modkit", version = "0.6.2" }
-modkit-auth = { package = "cf-modkit-auth", version = "0.6.1" }
-modkit-http = { package = "cf-modkit-http", version = "0.6.2" }
-modkit-security = { package = "cf-modkit-security", version = "0.6.2" }
-modkit-macros = { package = "cf-modkit-macros", version = "0.6.2" }
-modkit-errors = { package = "cf-modkit-errors", version = "0.6.2" }
+modkit = { package = "cf-modkit", version = "=0.6.2" }
+modkit-auth = { package = "cf-modkit-auth", version = "=0.6.1" }
+modkit-http = { package = "cf-modkit-http", version = "=0.6.2" }
+modkit-security = { package = "cf-modkit-security", version = "=0.6.2" }
+modkit-macros = { package = "cf-modkit-macros", version = "=0.6.2" }
+modkit-errors = { package = "cf-modkit-errors", version = "=0.6.2" }
 
 # cyberfabric-core SDKs (crates.io)
 authn-resolver-sdk = { package = "cf-authn-resolver-sdk", version = "0.3.8" }

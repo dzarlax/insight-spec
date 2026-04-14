@@ -1,0 +1,24 @@
+##
+## API Gateway — local development overrides
+##
+## Base values: src/backend/services/api-gateway/helm/values.yaml
+##
+
+replicaCount: 1
+
+ingress:
+  enabled: false        # access via port-forward locally
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+proxy:
+  routes:
+    - prefix: "/analytics"
+      upstream: "http://analytics-api-analytics-api:8081"
+      public: false

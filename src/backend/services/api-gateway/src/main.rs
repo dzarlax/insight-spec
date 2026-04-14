@@ -17,6 +17,7 @@
 // Insight modules (compiled into the binary, registered via inventory).
 mod auth_info;
 mod core_types;
+mod proxy;
 
 // Link external modules via inventory — runtime discovers them automatically.
 use api_gateway_module as _;

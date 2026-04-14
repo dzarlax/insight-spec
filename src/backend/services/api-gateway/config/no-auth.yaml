@@ -64,3 +64,9 @@ modules:
           name: "default"
           parent_id: null
           status: active
+
+  proxy:
+    config:
+      routes:
+        - prefix: "/analytics"
+          upstream: "http://localhost:8081"

@@ -106,6 +106,15 @@ modules:
           parent_id: null
           status: active
 
+  # ─── Reverse Proxy ─────────────────────────────────────────
+  # Routes requests to downstream services after authentication.
+  # Each route strips its prefix and forwards to the upstream URL.
+  proxy:
+    config:
+      routes:
+        - prefix: "/analytics"
+          upstream: "${PROXY_ANALYTICS_URL:=http://analytics-api:8081}"
+
 # ─── Local development ──────────────────────────────────────
 # To run without OIDC (auth disabled), override:
 #   modules.api-gateway.config.auth_disabled: true

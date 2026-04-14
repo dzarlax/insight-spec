@@ -29,7 +29,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/app/insight-api-gateway"]
-          args: ["-c", "/app/config/insight.yaml", "run"]
+          args: ["-c", "/app/config/gateway.yaml", "run"]
+          volumeMounts:
+            - name: gateway-config
+              mountPath: /app/config/gateway.yaml
+              subPath: gateway.yaml
+              readOnly: true
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -67,3 +72,7 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: gateway-config
+          configMap:
+            name: {{ include "insight-api-gateway.fullname" . }}-config
