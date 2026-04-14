@@ -49,18 +49,18 @@ definitions:
       - tenant_id
       - source_id
     properties:
-      unique_key: {}
-      tenant_id: {}
-      source_id: {}
-      data_source: {}
-      space_id: {}
-      name: {}
-      description: {}
-      space_type: {}
-      status: {}
-      url: {}
-      created_at: {}
-      collected_at: {}
+      unique_key: {type: ["string", "null"]}
+      tenant_id: {type: ["string", "null"]}
+      source_id: {type: ["string", "null"]}
+      data_source: {type: ["string", "null"]}
+      space_id: {type: ["string", "null"]}
+      name: {type: ["string", "null"]}
+      description: {type: ["string", "null"]}
+      space_type: {type: ["string", "null"]}
+      status: {type: ["string", "null"]}
+      url: {type: ["string", "null"]}
+      created_at: {type: ["string", "null"]}
+      collected_at: {type: ["string", "null"]}
     additionalProperties: true
 
   wiki_pages_schema:
@@ -71,21 +71,21 @@ definitions:
       - tenant_id
       - source_id
     properties:
-      unique_key: {}
-      tenant_id: {}
-      source_id: {}
-      data_source: {}
-      page_id: {}
-      space_id: {}
-      title: {}
-      status: {}
-      author_id: {}
-      last_editor_id: {}
-      created_at: {}
-      updated_at: {}
-      version_number: {}
-      parent_page_id: {}
-      collected_at: {}
+      unique_key: {type: ["string", "null"]}
+      tenant_id: {type: ["string", "null"]}
+      source_id: {type: ["string", "null"]}
+      data_source: {type: ["string", "null"]}
+      page_id: {type: ["string", "null"]}
+      space_id: {type: ["string", "null"]}
+      title: {type: ["string", "null"]}
+      status: {type: ["string", "null"]}
+      author_id: {type: ["string", "null"]}
+      last_editor_id: {type: ["string", "null"]}
+      created_at: {type: ["string", "null"]}
+      updated_at: {type: ["string", "null"]}
+      version_number: {type: ["string", "null"]}
+      parent_page_id: {type: ["string", "null"]}
+      collected_at: {type: ["string", "null"]}
     additionalProperties: true
 
   wiki_page_versions_schema:
@@ -96,17 +96,17 @@ definitions:
       - tenant_id
       - source_id
     properties:
-      unique_key: {}
-      tenant_id: {}
-      source_id: {}
-      data_source: {}
-      page_id: {}
-      version_number: {}
-      author_id: {}
-      created_at: {}
-      message: {}
-      minor_edit: {}
-      collected_at: {}
+      unique_key: {type: ["string", "null"]}
+      tenant_id: {type: ["string", "null"]}
+      source_id: {type: ["string", "null"]}
+      data_source: {type: ["string", "null"]}
+      page_id: {type: ["string", "null"]}
+      version_number: {type: ["string", "null"]}
+      author_id: {type: ["string", "null"]}
+      created_at: {type: ["string", "null"]}
+      message: {type: ["string", "null"]}
+      minor_edit: {type: ["boolean", "null"]}
+      collected_at: {type: ["string", "null"]}
     additionalProperties: true
 
 streams:
