@@ -484,7 +484,7 @@ All Bronze table schemas are defined in [`confluence.md`](../confluence.md) and 
 
 All tables use `ReplacingMergeTree(_version)` with `_version = toUnixTimestamp64Milli(now64())` for deduplication.
 
-> **Note on schema types**: All stream schemas use `{}` (any type) for property types instead of specific types (string, integer, etc.). This is intentional because Airbyte `AddFields` transformations may return values with varying types depending on the source data. ClickHouse handles typing at the destination level via column definitions.
+> **Note on schema types**: Stream schemas use explicit typed property definitions (`["string", "null"]`, `["boolean", "null"]`) to enable ClickHouse destination to create tables with correct column types. All schemas include `required: [unique_key, tenant_id, source_id]` and `additionalProperties: true`.
 >
 > **Note on `wiki_page_activity`**: The PRD defines a `wiki_page_activity` table with per-user per-day edit and view counts. In Phase 1, this table is NOT populated by the connector. Raw version records are stored in `wiki_page_versions`; expansion to `wiki_page_activity` (one row per edit per user per day) is deferred to Silver/dbt. View activity (analytics) is deferred to Phase 2.
 >
